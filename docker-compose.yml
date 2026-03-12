@@ -1,0 +1,46 @@
+services:
+
+  app:
+    build:
+      context: ./app
+      dockerfile: Dockerfile
+    container_name: laundryhub_app
+    working_dir: /var/www/html
+    volumes:
+      - ./app:/var/www/html
+    environment:
+      - APP_ENV=local
+    depends_on:
+      - db
+
+  webserver:
+    image: nginx:latest
+    container_name: laundryhub_nginx
+    ports:
+      - "8000:80"
+    volumes:
+      - ./app:/var/www/html
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+    depends_on:
+      - app
+
+  db:
+    image: mysql:8
+    container_name: laundryhub_db
+    restart: always
+    environment:
+      MYSQL_DATABASE: laundryhub_db
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3306:3306"
+    volumes:
+      - ./database:/var/lib/mysql
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    container_name: laundryhub_phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      PMA_HOST: db
+      MYSQL_ROOT_PASSWORD: root

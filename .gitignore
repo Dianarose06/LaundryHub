@@ -1,0 +1,26 @@
+# Database files (MySQL data)
+/database/
+
+# Docker
+.env
+docker-compose.override.yml
+*.log
+
+# IDE and Editor
+.vscode/
+.idea/
+*.iml
+
+# OS files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Git folders from subprojects (if accidentally created)
+mobile/.git/
+app/.git/
+
+# Temporary files
+*.tmp
+*.bak
