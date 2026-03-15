@@ -444,16 +444,18 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
               Row(
                 children: [
                   _infoItem(Icons.calendar_today_outlined,
-                    _fmtShortDate(order['pickup_date'])),
+                    order['delivery_type'] == 'delivery' 
+                      ? _fmtShortDate(order['delivery_date'])
+                      : _fmtShortDate(order['pickup_date'])),
                   const SizedBox(width: 16),
                   _infoItem(Icons.scale_outlined,
                     '${order['weight_kg'] ?? ''} kg'),
                   const SizedBox(width: 16),
                   _infoItem(
-                    order['delivery_type'] == 'dropoff'
+                    order['delivery_type'] == 'delivery'
                         ? Icons.directions_walk_outlined
                         : Icons.two_wheeler_outlined,
-                    order['delivery_type'] == 'dropoff' ? 'Drop-off' : 'Pickup'),
+                    order['delivery_type'] == 'delivery' ? 'Drop-off' : 'Pickup'),
                 ],
               ),
 
