@@ -63,7 +63,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
               emoji: _emojiFor(name),
               name:  name,
               description: m['description'] as String? ?? '',
-              price: '₱${price8kg % 1 == 0 ? price8kg.toInt() : price8kg.toStringAsFixed(2)}/8kg',
+              price: '₱${price8kg.round()}/8kg',
               pricePerKg: priceVal,
               category: m['category'] as String? ?? 'general',
               imageUrl: m['image_url'] as String?,
