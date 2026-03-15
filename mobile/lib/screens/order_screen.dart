@@ -793,6 +793,8 @@ class _OrderScreenState extends State<OrderScreen> {
               children: [
                 _summaryRow('SERVICE', selectedSvc['name']),
                 _summaryDivider(),
+                _summaryRow('PRICE', selectedSvc['price'] as String),
+                _summaryDivider(),
                 _summaryRow('TYPE',
                   _deliveryType == 'pickup' ? 'Pickup' : 'Drop-off'),
                 _summaryDivider(),
