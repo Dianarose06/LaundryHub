@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Order;
 use App\Models\User;
+use App\Services\NotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
 use Illuminate\Validation\Rule;
@@ -99,9 +100,44 @@ class AdminController extends Controller
             'status' => ['required', Rule::in(['pending', 'ongoing', 'ready', 'completed', 'cancelled'])],
         ]);
 
-        $order->update(['status' => $validated['status']]);
+        $oldStatus = $order->status;
+        $newStatus = $validated['status'];
+        
+        $order->update(['status' => $newStatus]);
+
+        // Send notification to customer
+        $notificationService = new NotificationService();
+        $this->sendOrderStatusNotification($notificationService, $order, $oldStatus, $newStatus);
 
         return response()->json(['data' => $order]);
+    }
+
+    private function sendOrderStatusNotification(
+        NotificationService $service,
+        Order $order,
+        string $oldStatus,
+        string $newStatus
+    ): void {
+        $serviceName = $order->service?->name ?? 'Your order';
+        $notificationText = match ($newStatus) {
+            'ongoing' => "{$serviceName} is now being processed",
+            'ready' => "{$serviceName} is ready for pickup/delivery",
+            'completed' => "Your {$serviceName} order is completed! 🎉",
+            'cancelled' => "Your {$serviceName} order has been cancelled",
+            default => "Your order status has been updated",
+        };
+
+        $service->sendToUser(
+            userId: $order->user_id,
+            title: 'Order Status Update',
+            message: $notificationText,
+            type: 'order_status',
+            orderId: $order->id,
+            data: [
+                'status' => $newStatus,
+                'order_id' => (string) $order->id,
+            ]
+        );
     }
 
     public function topCustomers(Request $request)
