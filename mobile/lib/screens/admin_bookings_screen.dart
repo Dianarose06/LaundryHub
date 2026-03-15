@@ -216,7 +216,6 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     final isPending = b.status == 'Pending';
     final isOngoing = b.status == 'Ongoing';
     final isReady = b.status == 'Ready';
-    final isCompleted = b.status == 'Completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
