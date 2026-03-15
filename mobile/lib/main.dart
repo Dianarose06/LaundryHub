@@ -1,24 +1,12 @@
 import 'package:flutter/material.dart';
-import 'package:firebase_core/firebase_core.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/admin_shell.dart';
 import 'services/auth_service.dart';
-import 'services/notification_service.dart';
-import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Initialize Firebase
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
-  // Initialize notifications
-  await NotificationService.initialize();
-  
   runApp(const LaundryHubApp());
 }
 

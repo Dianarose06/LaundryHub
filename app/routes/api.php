@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AdminController;
-use App\Http\Controllers\Api\DeviceTokenController;
 
 // Public auth routes with rate limiting
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,15');
@@ -27,12 +26,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
     Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel']);
-
-    // Device token routes
-    Route::post('/device-tokens', [DeviceTokenController::class, 'store']);
-    Route::delete('/device-tokens', [DeviceTokenController::class, 'destroy']);
-    Route::get('/notifications', [DeviceTokenController::class, 'getNotifications']);
-    Route::patch('/notifications/{notificationId}/read', [DeviceTokenController::class, 'markAsRead']);
 
     // Admin-only routes
     Route::get('/admin/stats', [AdminController::class, 'stats']);
