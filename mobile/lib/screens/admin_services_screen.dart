@@ -57,12 +57,13 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
             final priceVal = rawPrice is num
                 ? rawPrice.toDouble()
                 : double.tryParse(rawPrice?.toString() ?? '0') ?? 0.0;
+            final price8kg = priceVal * 8;
             return _ServiceItem(
               id: (m['id'] as num).toInt(),
               emoji: _emojiFor(name),
               name:  name,
               description: m['description'] as String? ?? '',
-              price: '₱${priceVal % 1 == 0 ? priceVal.toInt() : priceVal}/kg',
+              price: '₱${price8kg % 1 == 0 ? price8kg.toInt() : price8kg.toStringAsFixed(2)}/8kg',
               pricePerKg: priceVal,
               category: m['category'] as String? ?? 'general',
               imageUrl: m['image_url'] as String?,

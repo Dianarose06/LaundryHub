@@ -89,7 +89,8 @@ class _OrderScreenState extends State<OrderScreen> {
             final priceVal = rawPrice is num
                 ? rawPrice.toDouble()
                 : double.tryParse(rawPrice?.toString() ?? '0') ?? 0.0;
-            final priceStr = '₱${priceVal % 1 == 0 ? priceVal.toInt() : priceVal}/kg';
+            final price8kg = priceVal * 8;
+            final priceStr = '₱${price8kg % 1 == 0 ? price8kg.toInt() : price8kg.toStringAsFixed(2)}/8kg';
             return <String, dynamic>{
               'id': (m['id'] as num).toInt(),
               'name': name,
