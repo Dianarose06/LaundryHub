@@ -243,6 +243,7 @@ class _OrderScreenState extends State<OrderScreen> {
       deliveryDate: _deliveryDate,
       deliveryTime: _deliveryTime,
       notes: _instructionsController.text.trim(),
+      deliveryType: _deliveryType == 'dropoff' ? 'delivery' : 'pickup',
     );
 
     if (!mounted) return;

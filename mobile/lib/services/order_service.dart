@@ -21,6 +21,7 @@ class OrderService {
     DateTime? deliveryDate,
     TimeOfDay? deliveryTime,
     String? notes,
+    String? deliveryType,
   }) async {
     try {
       final token = await _getToken();
@@ -44,6 +45,7 @@ class OrderService {
         if (deliveryTime != null) 
           'delivery_time': '${deliveryTime.hour.toString().padLeft(2, '0')}:${deliveryTime.minute.toString().padLeft(2, '0')}',
         if (notes != null && notes.isNotEmpty) 'notes': notes,
+        if (deliveryType != null) 'delivery_type': deliveryType,
       };
 
       final response = await http.post(
