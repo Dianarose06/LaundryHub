@@ -215,6 +215,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     final b = _allBookings[idx];
     final isPending = b.status == 'Pending';
     final isOngoing = b.status == 'Ongoing';
+    final isReady = b.status == 'Ready';
+    final isCompleted = b.status == 'Completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -280,6 +282,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               const Divider(height: 1, color: Color(0xFFE2E8F0)),
               const SizedBox(height: 12),
               _buildStatusChips(idx),
+              const SizedBox(height: 12),
+              _buildCompleteButton(idx),
+            ],
+            if (isReady) ...[
+              const SizedBox(height: 14),
+              _buildCompleteButton(idx),
             ],
             if (isPending) ...[
               const SizedBox(height: 14),
@@ -393,6 +401,43 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           ),
         ),
       ],
+    );
+  }
+
+  // ── Mark Completed button for ongoing/ready cards ────────────────────────────
+  Widget _buildCompleteButton(int idx) {
+    final b = _allBookings[idx];
+    return GestureDetector(
+      onTap: () async {
+        await AdminService.updateOrderStatus(b.orderId, 'completed');
+        _loadOrders();
+      },
+      child: Container(
+        height: 44,
+        decoration: BoxDecoration(
+          color: const Color(0xFF10B981),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFF10B981)),
+        ),
+        child: Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.check_circle_outline, 
+                color: Colors.white, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Mark as Completed',
+                style: GoogleFonts.dmSans(
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  color: Colors.white,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
