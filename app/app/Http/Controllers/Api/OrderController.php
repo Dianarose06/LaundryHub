@@ -69,7 +69,7 @@ class OrderController extends Controller
             'user_id'        => $request->user()->id,
             'service_id'     => $service->id,
             'weight_kg'      => $validated['weight_kg'],
-            'total_price'    => round($service->price_per_kg * $validated['weight_kg'], 2),
+            'total_price'    => round(($service->price_per_kg / 8) * $validated['weight_kg'], 2),
             'status'         => 'pending',
             'pickup_address' => $validated['pickup_address'],
             'pickup_date'    => $validated['pickup_date'] ?? null,
