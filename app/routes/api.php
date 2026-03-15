@@ -6,14 +6,15 @@ use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AdminController;
 
-Route::post('/register', [AuthController::class, 'register']);
-Route::post('/login', [AuthController::class, 'login']);
-Route::post('/send-verification-code', [AuthController::class, 'sendVerificationCode']);
-Route::post('/check-verification-code', [AuthController::class, 'checkVerificationCode']);
-Route::post('/resend-verification', [AuthController::class, 'resendVerification']);
-Route::post('/verify-code', [AuthController::class, 'verifyCode']);
-Route::post('/send-password-reset-code', [AuthController::class, 'sendPasswordResetCode']);
-Route::post('/reset-password', [AuthController::class, 'resetPassword']);
+// Public auth routes with rate limiting
+Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,15');
+Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:5,15');
+Route::post('/send-verification-code', [AuthController::class, 'sendVerificationCode'])->middleware('throttle:3,15');
+Route::post('/check-verification-code', [AuthController::class, 'checkVerificationCode'])->middleware('throttle:5,15');
+Route::post('/resend-verification', [AuthController::class, 'resendVerification'])->middleware('throttle:3,15');
+Route::post('/verify-code', [AuthController::class, 'verifyCode'])->middleware('throttle:5,15');
+Route::post('/send-password-reset-code', [AuthController::class, 'sendPasswordResetCode'])->middleware('throttle:3,15');
+Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middleware('throttle:5,15');
 
 Route::get('/services', [ServiceController::class, 'index']);
 Route::get('/services/{service}', [ServiceController::class, 'show']);

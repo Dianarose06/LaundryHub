@@ -1,11 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import '../config/api_config.dart';
 
 class AdminService {
-  // For Android emulator use 10.0.2.2 to reach host machine.
-  // Change to your machine's IP if testing on a physical device.
-  static const String _baseUrl = 'http://localhost:8000/api';
+  static String get _baseUrl => ApiConfig.apiPath;
 
   static Future<String?> _getToken() async {
     final prefs = await SharedPreferences.getInstance();

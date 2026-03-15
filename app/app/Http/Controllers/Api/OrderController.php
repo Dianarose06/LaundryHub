@@ -15,7 +15,7 @@ class OrderController extends Controller
             ->orders()
             ->with('service')
             ->latest()
-            ->get()
+            ->paginate(20)
             ->map(fn ($order) => [
                 'id' => $order->id,
                 'service_type' => $order->service?->name ?? 'Unknown Service',
@@ -27,7 +27,7 @@ class OrderController extends Controller
                 'pickup_time' => $order->pickup_time,
                 'delivery_date' => $order->delivery_date,
                 'delivery_time' => $order->delivery_time,
-                'delivery_type' => 'pickup', // Default to pickup since it's not stored in DB
+                'delivery_type' => $order->delivery_type ?? 'pickup',
                 'special_instructions' => $order->notes,
                 'created_at' => $order->created_at,
                 'updated_at' => $order->updated_at,
@@ -40,12 +40,13 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'service_id'     => 'required|exists:services,id',
-            'weight_kg'      => 'required|numeric|min:0.1',
+            'weight_kg'      => 'required|numeric|min:0.1|max:500',
             'pickup_address' => 'required|string|max:500',
             'pickup_date'    => 'nullable|date',
             'pickup_time'    => 'nullable|date_format:H:i',
             'delivery_date'  => 'nullable|date',
             'delivery_time'  => 'nullable|date_format:H:i',
+            'delivery_type'  => 'nullable|in:pickup,delivery',
             'notes'          => 'nullable|string|max:1000',
         ]);
 
@@ -62,6 +63,7 @@ class OrderController extends Controller
             'pickup_time'    => $validated['pickup_time'] ?? null,
             'delivery_date'  => $validated['delivery_date'] ?? null,
             'delivery_time'  => $validated['delivery_time'] ?? null,
+            'delivery_type'  => $validated['delivery_type'] ?? 'pickup',
             'notes'          => $validated['notes'] ?? null,
         ]);
 

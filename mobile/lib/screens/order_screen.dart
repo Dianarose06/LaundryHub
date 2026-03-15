@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/order_service.dart';
+import '../config/api_config.dart';
 import 'booking_confirmed_screen.dart';
 
 // â”€â”€ Design tokens (mirrors HomeScreen / _C) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -78,7 +79,7 @@ class _OrderScreenState extends State<OrderScreen> {
   Future<void> _fetchServices() async {
     try {
       final response = await http.get(
-        Uri.parse('http://localhost:8000/api/services'),
+        Uri.parse('${ApiConfig.apiPath}/services'),
         headers: {'Accept': 'application/json'},
       );
       if (!mounted) return;
