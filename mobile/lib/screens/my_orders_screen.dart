@@ -168,11 +168,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       color: _statusBgColor(status),
       borderRadius: BorderRadius.circular(8),
     ),
-    child: Text(
-      _statusLabel(status),
-      style: GoogleFonts.dmSans(
-        fontSize: 11, fontWeight: FontWeight.w600,
-        color: _statusTextColor(status)),
+    child: Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (status.toLowerCase() == 'completed')
+          const Padding(
+            padding: EdgeInsets.only(right: 4),
+            child: Text('✓', style: TextStyle(
+              fontSize: 11, fontWeight: FontWeight.w600, color: _M.green)),
+          ),
+        Text(
+          _statusLabel(status),
+          style: GoogleFonts.dmSans(
+            fontSize: 11, fontWeight: FontWeight.w600,
+            color: _statusTextColor(status)),
+        ),
+      ],
     ),
   );
 
@@ -373,6 +384,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     final serviceType = order['service_type'] ?? '';
     final orderId = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
     final svcName = _formatServiceType(serviceType);
+    // Get emoji from API response, fallback to local mapping if not present
+    final emoji = (order['service_emoji'] ?? _getServiceEmoji(serviceType)).toString();
     final isActive = status == 'ongoing' || status == 'pending' ||
         status == 'ready' || status == 'in_progress' || status == 'processing';
     final isCompleted = status == 'completed' || status == 'cancelled';
@@ -406,7 +419,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
                   Container(
                     margin: const EdgeInsets.only(right: 10),
                     child: Text(
-                      _getServiceEmoji(serviceType),
+                      emoji,
                       style: const TextStyle(fontSize: 28),
                     ),
                   ),

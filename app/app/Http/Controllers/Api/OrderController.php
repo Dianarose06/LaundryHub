@@ -9,6 +9,18 @@ use Illuminate\Http\Request;
 
 class OrderController extends Controller
 {
+    private function getServiceEmoji(string $serviceName): string
+    {
+        return match(strtolower($serviceName)) {
+            'express wash' => '⚡',
+            'soft wash' => '🫧',
+            'beddings' => '🛏️',
+            'wash-dry-fold' => '👕',
+            'dry cleaning' => '🧼',
+            default => '🧺',
+        };
+    }
+
     public function index(Request $request)
     {
         $orders = $request->user()
@@ -19,6 +31,7 @@ class OrderController extends Controller
             ->map(fn ($order) => [
                 'id' => $order->id,
                 'service_type' => $order->service?->name ?? 'Unknown Service',
+                'service_emoji' => $this->getServiceEmoji($order->service?->name ?? ''),
                 'status' => $order->status,
                 'weight_kg' => $order->weight_kg,
                 'total_price' => $order->total_price,
@@ -89,9 +102,9 @@ class OrderController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        if (! in_array($order->status, ['pending'])) {
+        if (! in_array($order->status, ['pending', 'processing', 'ready'])) {
             return response()->json([
-                'message' => 'Only pending orders can be cancelled.',
+                'message' => 'Orders that are completed or already cancelled cannot be cancelled.',
             ], 422);
         }
 

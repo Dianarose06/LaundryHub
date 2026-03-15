@@ -18,6 +18,18 @@ class AdminController extends Controller
         }
     }
 
+    private function getServiceEmoji(string $serviceName): string
+    {
+        return match(strtolower($serviceName)) {
+            'express wash' => '⚡',
+            'soft wash' => '🫧',
+            'beddings' => '🛏️',
+            'wash-dry-fold' => '👕',
+            'dry cleaning' => '🧼',
+            default => '🧺',
+        };
+    }
+
     public function stats(Request $request)
     {
         $this->ensureAdmin($request);
@@ -47,6 +59,7 @@ class AdminController extends Controller
                 'id'       => '#LH-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
                 'customer' => $order->user?->name ?? 'Unknown',
                 'service'  => $order->service?->name ?? 'Unknown Service',
+                'service_emoji' => $this->getServiceEmoji($order->service?->name ?? ''),
                 'status'   => ucfirst($order->status),
                 'amount'   => '₱' . number_format($order->total_price, 0),
             ]);
@@ -69,6 +82,7 @@ class AdminController extends Controller
             'id'       => '#LH-' . str_pad($order->id, 3, '0', STR_PAD_LEFT),
             'customer' => $order->user?->name ?? 'Unknown',
             'service'  => $order->service?->name ?? 'Unknown Service',
+            'service_emoji' => $this->getServiceEmoji($order->service?->name ?? ''),
             'date'     => optional($order->created_at)->format('M j, Y · g:i A') ?? '—',
             'cost'     => '₱' . number_format($order->total_price, 0),
             'status'   => ucfirst($order->status),
