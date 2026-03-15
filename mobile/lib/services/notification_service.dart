@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 
@@ -9,6 +10,12 @@ class NotificationService {
   static final FirebaseMessaging _firebaseMessaging =
       FirebaseMessaging.instance;
   static String? deviceToken;
+
+  static String _getDeviceType() {
+    if (Platform.isAndroid) return 'android';
+    if (Platform.isIOS) return 'ios';
+    return 'unknown';
+  }
 
   static Future<void> initialize() async {
     try {
@@ -91,8 +98,8 @@ class NotificationService {
         },
         body: jsonEncode({
           'token': token,
-          'device_type': 'android', // Should detect iOS/Android
-          'device_name': 'Mobile Device',
+          'device_type': _getDeviceType(),
+          'device_name': '${Platform.operatingSystem} Device',
         }),
       );
 
