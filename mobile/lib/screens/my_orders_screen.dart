@@ -35,6 +35,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           return '\u{1F9FA}';
         case 'dry_clean':
         case 'dry clean':
+        case 'dry cleaning':
           return '\u2728';
         case 'beddings':
         case 'beddings & linens':

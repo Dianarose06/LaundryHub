@@ -13,10 +13,10 @@ class OrderController extends Controller
     {
         return match(strtolower($serviceName)) {
             'express wash' => '⚡',
-            'soft wash' => '🫧',
-            'beddings' => '🛏️',
-            'wash-dry-fold' => '👕',
-            'dry cleaning' => '🧼',
+            'soft wash' => '🌸',
+            'beddings' => '🛏',
+            'wash-dry-fold' => '🧺',
+            'dry cleaning' => '✨',
             default => '🧺',
         };
     }
