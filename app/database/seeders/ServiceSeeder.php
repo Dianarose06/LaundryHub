@@ -9,15 +9,13 @@ class ServiceSeeder extends Seeder
 {
     public function run(): void
     {
+        // Sprint 2 - Final 5 services with 8kg package pricing
         $services = [
-            ['name' => 'Wash & Dry', 'description' => 'Full wash and dry service', 'price_per_kg' => 65.00, 'category' => 'Basic'],
-            ['name' => 'Dry Cleaning', 'description' => 'Dry cleaning for delicate wear', 'price_per_kg' => 180.00, 'category' => 'Specialty'],
-            ['name' => 'Wash & Iron', 'description' => 'Clothes washed and ironed', 'price_per_kg' => 85.00, 'category' => 'Premium'],
-            ['name' => 'Beddings', 'description' => 'Deep wash for blankets and linens', 'price_per_kg' => 90.00, 'category' => 'Basic'],
-            ['name' => 'Express Wash', 'description' => 'Same-day rush wash service', 'price_per_kg' => 120.00, 'category' => 'Express'],
-            ['name' => 'Shoe Cleaning', 'description' => 'Professional cleaning for all shoe types', 'price_per_kg' => 150.00, 'category' => 'Specialty'],
-            ['name' => 'Soft Wash', 'description' => 'Gentle wash for delicates and baby clothes', 'price_per_kg' => 75.00, 'category' => 'Premium'],
-            ['name' => 'Sportswear', 'description' => 'Wash for jerseys, gym clothes, and uniforms', 'price_per_kg' => 70.00, 'category' => 'Basic'],
+            ['name' => 'Express Wash', 'description' => 'Same-day rush wash service', 'price_per_kg' => 200, 'category' => 'Express', 'is_active' => true],
+            ['name' => 'Soft Wash', 'description' => 'Gentle wash for delicates and baby clothes', 'price_per_kg' => 75, 'category' => 'Premium', 'is_active' => true],
+            ['name' => 'Beddings', 'description' => 'Deep wash for blankets and linens', 'price_per_kg' => 180, 'category' => 'Basic', 'is_active' => true],
+            ['name' => 'Wash-Dry-Fold', 'description' => 'Complete laundry service including washing, drying, and folding clothes', 'price_per_kg' => 150, 'category' => 'Standard', 'is_active' => true],
+            ['name' => 'Dry Cleaning', 'description' => 'Dry cleaning for delicate wear', 'price_per_kg' => 150, 'category' => 'Specialty', 'is_active' => true],
         ];
         foreach ($services as $service) {
             Service::firstOrCreate(['name' => $service['name']], $service);
