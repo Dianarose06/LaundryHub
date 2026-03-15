@@ -20,6 +20,7 @@ class Order extends Model
         'pickup_time',
         'delivery_date',
         'delivery_time',
+        'delivery_type',
         'notes',
         'admin_notes',
     ];
