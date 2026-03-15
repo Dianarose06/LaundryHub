@@ -282,12 +282,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               const Divider(height: 1, color: Color(0xFFE2E8F0)),
               const SizedBox(height: 12),
               _buildStatusChips(idx),
-              const SizedBox(height: 12),
-              _buildCompleteButton(idx),
             ],
             if (isReady) ...[
-              const SizedBox(height: 14),
-              _buildCompleteButton(idx),
+              const SizedBox(height: 12),
+              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const SizedBox(height: 12),
+              _buildStatusChips(idx),
             ],
             if (isPending) ...[
               const SizedBox(height: 14),
@@ -326,42 +326,79 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: Row(
-        children: steps.asMap().entries.map((e) {
-          final i       = e.key;
-          final label   = e.value;
-          final isActive = i == current;
-          return Padding(
-            padding: EdgeInsets.only(right: i < steps.length - 1 ? 8 : 0),
-            child: GestureDetector(
-              onTap: () {
-                setState(() => _stepState[b.orderId] = i);
-              },
-              child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
-                decoration: BoxDecoration(
-                  color: isActive
-                      ? const Color(0xFFEFF6FF)
-                      : Colors.white,
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: isActive ? _primary : _border,
-                    width: isActive ? 1.5 : 1,
+        children: [
+          ...steps.asMap().entries.map((e) {
+            final i       = e.key;
+            final label   = e.value;
+            final isActive = i == current;
+            return Padding(
+              padding: EdgeInsets.only(right: i < steps.length - 1 ? 8 : 0),
+              child: GestureDetector(
+                onTap: () {
+                  setState(() => _stepState[b.orderId] = i);
+                },
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: isActive
+                        ? const Color(0xFFEFF6FF)
+                        : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: isActive ? _primary : _border,
+                      width: isActive ? 1.5 : 1,
+                    ),
                   ),
-                ),
-                child: Text(
-                  label,
-                  style: GoogleFonts.dmSans(
-                    fontSize: 12,
-                    fontWeight:
-                        isActive ? FontWeight.w700 : FontWeight.w500,
-                    color: isActive ? _primary : const Color(0xFF64748B),
+                  child: Text(
+                    label,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      fontWeight:
+                          isActive ? FontWeight.w700 : FontWeight.w500,
+                      color: isActive ? _primary : const Color(0xFF64748B),
+                    ),
                   ),
                 ),
               ),
+            );
+          }).toList(),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: () async {
+              await AdminService.updateOrderStatus(b.orderId, 'completed');
+              _loadOrders();
+            },
+            child: Container(
+              padding:
+                  const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+              decoration: BoxDecoration(
+                color: const Color(0xFFECFDF5),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFF10B981),
+                  width: 1.5,
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.check_circle_outline,
+                    color: Color(0xFF10B981), size: 14),
+                  const SizedBox(width: 4),
+                  Text(
+                    'Complete',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 12,
+                      fontWeight: FontWeight.w700,
+                      color: const Color(0xFF10B981),
+                    ),
+                  ),
+                ],
+              ),
             ),
-          );
-        }).toList(),
+          ),
+        ],
       ),
     );
   }
@@ -401,43 +438,6 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  // ── Mark Completed button for ongoing/ready cards ────────────────────────────
-  Widget _buildCompleteButton(int idx) {
-    final b = _allBookings[idx];
-    return GestureDetector(
-      onTap: () async {
-        await AdminService.updateOrderStatus(b.orderId, 'completed');
-        _loadOrders();
-      },
-      child: Container(
-        height: 44,
-        decoration: BoxDecoration(
-          color: const Color(0xFF10B981),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: const Color(0xFF10B981)),
-        ),
-        child: Center(
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.check_circle_outline, 
-                color: Colors.white, size: 16),
-              const SizedBox(width: 6),
-              Text(
-                'Mark as Completed',
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.white,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }
