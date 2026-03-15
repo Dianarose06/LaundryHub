@@ -193,13 +193,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   String _serviceEmoji(String t) {
     switch (t.toLowerCase()) {
-      case 'wash & dry':
-      case 'wash & fold':
-      case 'wash_fold':
-        return '👕';
-      case 'wash & iron':
-      case 'wash_iron':
-        return '👔';
+      case 'wash-dry-fold':
+      case 'wash–dry–fold':
+        return '🧺';
       case 'dry clean':
       case 'dry_clean':
       case 'dry cleaning':
@@ -211,12 +207,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       case 'express wash':
       case 'express_wash':
         return '⚡';
-      case 'shoe cleaning':
-        return '👟';
       case 'soft wash':
         return '🌸';
-      case 'sportswear':
-        return '🎽';
       case 'premium care':
       case 'premium_care':
         return '✨';

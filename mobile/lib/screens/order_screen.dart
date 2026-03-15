@@ -36,19 +36,14 @@ class _OrderScreenState extends State<OrderScreen> {
   bool _loadingServices = true;
 
   static const _serviceEmojis = <String, String>{
-    'wash & dry':          '👕',
-    'wash and dry':        '👕',
-    'wash & fold':         '👕',
+    'wash-dry-fold':       '🧺',
+    'wash–dry–fold':       '🧺',
     'dry clean':           '✨',
     'dry cleaning':        '✨',
-    'wash & iron':         '👔',
-    'wash and iron':       '👔',
     'beddings':            '🛏',
     'beddings & linens':   '🛏',
     'express wash':        '⚡',
-    'shoe cleaning':       '👟',
     'soft wash':           '🌸',
-    'sportswear':          '🎽',
   };
 
   String _emojiFor(String name) =>

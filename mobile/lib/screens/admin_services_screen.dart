@@ -22,21 +22,15 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
   List<_TopCustomer> _customers = [];
 
   static const _serviceEmojis = <String, String>{
-    'wash & dry':        '👕',
-    'wash and dry':      '👕',
-    'wash & fold':       '👕',
-    'wash and fold':     '👕',
-    'dry clean':         '✨',
-    'dry cleaning':      '✨',
-    'wash & iron':       '👔',
-    'wash and iron':     '👔',
-    'beddings':          '🛏',
-    'beddings & linens': '🛏',
+    'wash-dry-fold':      '🧺',
+    'wash–dry–fold':      '🧺',
+    'dry clean':          '✨',
+    'dry cleaning':       '✨',
+    'beddings':           '🛏',
+    'beddings & linens':  '🛏',
     'beddings and linens': '🛏',
-    'express wash':      '⚡',
-    'shoe cleaning':     '👟',
-    'soft wash':         '🌸',
-    'sportswear':        '🎽',
+    'express wash':       '⚡',
+    'soft wash':          '🌸',
   };
 
   String _emojiFor(String name) =>

@@ -30,13 +30,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     // Emoji mapping for service types (match home_screen.dart)
     String _getServiceEmoji(String serviceType) {
       switch (serviceType.toLowerCase()) {
-        case 'wash_fold':
-        case 'wash & fold':
-        case 'wash & dry':
-          return '\u{1F455}';
-        case 'wash_iron':
-        case 'wash & iron':
-          return '\u{1F454}';
+        case 'wash-dry-fold':
+        case 'wash–dry–fold':
+          return '\u{1F9FA}';
         case 'dry_clean':
         case 'dry clean':
           return '\u2728';
@@ -45,12 +41,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
           return '\u{1F6CF}';
         case 'express wash':
           return '\u26A1';
-        case 'shoe cleaning':
-          return '\u{1F45F}';
         case 'soft wash':
           return '\u{1F338}';
-        case 'sportswear':
-          return '\u{1F3BD}';
         default:
           return '\u{1F9FA}';
       }
