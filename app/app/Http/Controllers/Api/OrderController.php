@@ -11,14 +11,21 @@ class OrderController extends Controller
 {
     private function getServiceEmoji(string $serviceName): string
     {
-        return match(strtolower($serviceName)) {
-            'express wash' => '⚡',
-            'soft wash' => '🌸',
-            'beddings' => '🛏',
-            'wash-dry-fold' => '🧺',
-            'dry cleaning' => '✨',
-            default => '🧺',
-        };
+        $normalized = strtolower(trim($serviceName));
+        
+        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash–dry–fold')) {
+            return '🧺';
+        } elseif (str_contains($normalized, 'dry cleaning')) {
+            return '✨';
+        } elseif (str_contains($normalized, 'beddings')) {
+            return '🛏️';
+        } elseif (str_contains($normalized, 'express wash')) {
+            return '⚡';
+        } elseif (str_contains($normalized, 'soft wash')) {
+            return '🌸';
+        }
+        
+        return '🧺'; // Default
     }
 
     public function index(Request $request)

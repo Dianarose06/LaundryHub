@@ -35,7 +35,13 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   @override
   void initState() {
     super.initState();
-    _loadAnalytics();
+    _initializeAndLoadAnalytics();
+  }
+
+  Future<void> _initializeAndLoadAnalytics() async {
+    // Load persistent cache first
+    await AdminService.loadPersistentCache();
+    await _loadAnalytics();
   }
 
   Future<void> _loadAnalytics() async {
@@ -51,10 +57,14 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
         final rawBreakdown = (d['service_breakdown'] as List<dynamic>? ?? [])
             .map((e) => Map<String, dynamic>.from(e as Map))
             .toList();
+        debugPrint('📊 Analytics Raw Data - Monthly Revenue: ${d['monthly_revenue']}, Month Label: ${d['month_label']}');
+        final monthlyRev = (d['monthly_revenue'] as num?)?.toDouble() ?? 0;
+        debugPrint('💰 Monthly Revenue Calculation: Raw=$monthlyRev → Formatted=${_formatRevenue(monthlyRev)}');
+        debugPrint('📈 Weekly Revenue: ${rawWeekly.map((v) => '₱${v.toStringAsFixed(2)}').join(", ")}');
         setState(() {
           _weeklyRevenue    = rawWeekly.length == 7 ? rawWeekly : List.filled(7, 0);
           _serviceBreakdown = rawBreakdown;
-          _monthlyRevenue   = (d['monthly_revenue'] as num?)?.toDouble() ?? 0;
+          _monthlyRevenue   = monthlyRev;
           _monthLabel       = (d['month_label'] as String?) ?? '';
           _isLoading        = false;
         });

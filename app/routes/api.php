@@ -34,6 +34,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::patch('/admin/orders/{order}/status', [AdminController::class, 'updateOrderStatus']);
     Route::get('/admin/top-customers', [AdminController::class, 'topCustomers']);
     Route::get('/admin/analytics', [AdminController::class, 'analytics']);
+    Route::get('/admin/booking-summaries', [AdminController::class, 'bookingSummaries']);
     
     // Admin service management routes
     Route::get('/admin/services', [ServiceController::class, 'adminIndex']);

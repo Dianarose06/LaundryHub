@@ -96,7 +96,7 @@ class _OrderScreenState extends State<OrderScreen> {
               'emoji': _emojiFor(name),
               'price': priceStr,
               'pricePerKg': priceVal,
-              'description': m['description'] as String? ?? '',
+              'description': (m['description']?.toString() ?? ''),
             };
           }).toList();
           _loadingServices = false;

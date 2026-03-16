@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
@@ -6,6 +7,18 @@ import 'screens/admin_shell.dart';
 import 'services/auth_service.dart';
 
 void main() {
+  // Handle font loading errors gracefully on web
+  if (kIsWeb) {
+    FlutterError.onError = (errorDetails) {
+      if (errorDetails.exception.toString().contains('fonts.gstatic') ||
+          errorDetails.exception.toString().contains('Failed to fetch')) {
+        // Silently ignore font loading errors - app will use fallback fonts
+        return;
+      }
+      FlutterError.presentError(errorDetails);
+    };
+  }
+  
   runApp(const LaundryHubApp());
 }
 

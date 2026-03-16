@@ -156,7 +156,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                             child: Center(
                               child: Text(
-                                (_user?['name'] as String? ?? 'U')[0].toUpperCase(),
+                                ((_user?['name']?.toString() ?? 'U'))[0].toUpperCase(),
                                 style: const TextStyle(
                                   fontSize: 40,
                                   fontWeight: FontWeight.bold,
@@ -167,7 +167,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            _user?['name'] as String? ?? 'User',
+                            _user?['name']?.toString() ?? 'User',
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
@@ -176,7 +176,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            _user?['email'] as String? ?? '',
+                            _user?['email']?.toString() ?? '',
                             style: const TextStyle(
                               fontSize: 14,
                               color: Colors.white70,
@@ -206,19 +206,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           _buildInfoCard(
                             icon: Icons.person_outline,
                             label: 'Full Name',
-                            value: _user?['name'] as String? ?? 'N/A',
+                            value: _user?['name']?.toString() ?? 'N/A',
                           ),
                           const SizedBox(height: 12),
                           _buildInfoCard(
                             icon: Icons.email_outlined,
                             label: 'Email Address',
-                            value: _user?['email'] as String? ?? 'N/A',
+                            value: _user?['email']?.toString() ?? 'N/A',
                           ),
                           const SizedBox(height: 12),
                           _buildInfoCard(
                             icon: Icons.phone_outlined,
                             label: 'Phone Number',
-                            value: _user?['phone'] as String? ?? 'Not provided',
+                            value: _user?['phone']?.toString() ?? 'Not provided',
                           ),
                           const SizedBox(height: 12),
                           _buildInfoCard(

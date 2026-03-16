@@ -18,14 +18,33 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
 
   int _filterIndex = 0;
   bool _isLoading = true;
+  bool _isLoadingMore = false;
+  int _currentPage = 1;
+  int _lastPage = 1;
   List<_AdminBooking> _allBookings = [];
-  // local step UI state: orderId → step index (0=Washing,1=Drying,2=Ready,3=Done)
   final Map<int, int> _stepState = {};
+  late ScrollController _scrollController;
 
   @override
   void initState() {
     super.initState();
+    _scrollController = ScrollController();
+    _scrollController.addListener(_onScroll);
     _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  void _onScroll() {
+    if (_scrollController.position.pixels == _scrollController.position.maxScrollExtent) {
+      if (_currentPage < _lastPage && !_isLoadingMore) {
+        _loadMoreOrders();
+      }
+    }
   }
 
   // Maps a DB status string to the corresponding chip step index.
@@ -37,29 +56,45 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     }
   }
 
+  // Maps step index to database status
+  String _stepToStatus(int step) {
+    switch (step) {
+      case 0: return 'ongoing';    // Washing
+      case 1: return 'ongoing';    // Drying
+      case 2: return 'ready';      // Ready
+      case 3: return 'completed';  // Done
+      default: return 'ongoing';
+    }
+  }
+
   Future<void> _loadOrders() async {
     setState(() => _isLoading = true);
-    final result = await AdminService.fetchAllOrders();
+    _currentPage = 1;
+    final result = await AdminService.fetchAllOrders(page: _currentPage, perPage: 20);
     if (!mounted) return;
     if (result['success'] == true) {
       final list = result['data'] as List<dynamic>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+      _lastPage = pagination?['last_page'] as int? ?? 1;
+      
       final bookings = list.map((e) {
         final m = e as Map<String, dynamic>;
         return _AdminBooking(
-          orderId:    (m['order_id'] as num).toInt(),
-          id:         m['id'] as String,
-          customer:   m['customer'] as String,
-          service:    m['service'] as String,
-          date:       m['date'] as String,
-          cost:       m['cost'] as String,
-          status:     m['status'] as String,
-          statusStep: 0,
+          orderId:       (m['order_id'] as num?)?.toInt() ?? (m['id'] as num?)?.toInt() ?? 0,
+          id:            (m['id']?.toString() ?? '#${m['order_id']}'),
+          customer:      (m['customer_name']?.toString() ?? m['customer']?.toString() ?? 'N/A'),
+          serviceType:   (m['service_type']?.toString() ?? m['service']?.toString() ?? 'N/A'),
+          pickupDate:    (m['pickup_date']?.toString() ?? m['date']?.toString() ?? ''),
+          deliveryDate:  (m['delivery_date']?.toString() ?? ''),
+          deliveryType:  (m['delivery_type']?.toString() ?? 'pickup'),
+          weightKg:      (m['weight_kg']?.toString() ?? m['weight']?.toString() ?? '0'),
+          cost:          (m['total_price']?.toString() ?? m['cost']?.toString() ?? m['amount']?.toString() ?? '0'),
+          status:        (m['status']?.toString() ?? 'pending'),
+          pickupAddress: (m['pickup_address']?.toString() ?? ''),
         );
       }).toList();
       setState(() {
         _allBookings = bookings;
-        // Only initialise step from DB for orders not already being tracked
-        // (preserves local Washing→Drying chip selection)
         for (final b in bookings) {
           if (!_stepState.containsKey(b.orderId)) {
             _stepState[b.orderId] = _statusToStep(b.status);
@@ -69,6 +104,47 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
       });
     } else {
       setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadMoreOrders() async {
+    setState(() => _isLoadingMore = true);
+    final nextPage = _currentPage + 1;
+    final result = await AdminService.fetchAllOrders(page: nextPage, perPage: 20);
+    if (!mounted) return;
+    if (result['success'] == true) {
+      final list = result['data'] as List<dynamic>;
+      final pagination = result['pagination'] as Map<String, dynamic>?;
+      _lastPage = pagination?['last_page'] as int? ?? _lastPage;
+      
+      final bookings = list.map((e) {
+        final m = e as Map<String, dynamic>;
+        return _AdminBooking(
+          orderId:       (m['order_id'] as num?)?.toInt() ?? (m['id'] as num?)?.toInt() ?? 0,
+          id:            (m['id']?.toString() ?? '#${m['order_id']}'),
+          customer:      (m['customer_name']?.toString() ?? m['customer']?.toString() ?? 'N/A'),
+          serviceType:   (m['service_type']?.toString() ?? m['service']?.toString() ?? 'N/A'),
+          pickupDate:    (m['pickup_date']?.toString() ?? m['date']?.toString() ?? ''),
+          deliveryDate:  (m['delivery_date']?.toString() ?? ''),
+          deliveryType:  (m['delivery_type']?.toString() ?? 'pickup'),
+          weightKg:      (m['weight_kg']?.toString() ?? m['weight']?.toString() ?? '0'),
+          cost:          (m['total_price']?.toString() ?? m['cost']?.toString() ?? m['amount']?.toString() ?? '0'),
+          status:        (m['status']?.toString() ?? 'pending'),
+          pickupAddress: (m['pickup_address']?.toString() ?? ''),
+        );
+      }).toList();
+      setState(() {
+        _allBookings.addAll(bookings);
+        for (final b in bookings) {
+          if (!_stepState.containsKey(b.orderId)) {
+            _stepState[b.orderId] = _statusToStep(b.status);
+          }
+        }
+        _currentPage = nextPage;
+        _isLoadingMore = false;
+      });
+    } else {
+      setState(() => _isLoadingMore = false);
     }
   }
 
@@ -91,6 +167,17 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     return _allBookings.where((b) => b.status == label).length;
   }
 
+  String _formatDateDisplay(String dateStr) {
+    if (dateStr.isEmpty) return 'N/A';
+    try {
+      final date = DateTime.parse(dateStr);
+      const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+      return '${months[date.month - 1]} ${date.day}, ${date.year}';
+    } catch (_) {
+      return dateStr;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -111,9 +198,19 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       : RefreshIndicator(
                           onRefresh: _loadOrders,
                           child: ListView.builder(
+                            controller: _scrollController,
                             padding: const EdgeInsets.fromLTRB(16, 8, 16, 16),
-                            itemCount: _filteredIndices.length,
+                            itemCount: _filteredIndices.length + (_isLoadingMore ? 1 : 0),
                             itemBuilder: (_, i) {
+                              // Show loading indicator at the end when loading more
+                              if (i == _filteredIndices.length) {
+                                return Padding(
+                                  padding: const EdgeInsets.all(16),
+                                  child: Center(
+                                    child: CircularProgressIndicator(color: _primary),
+                                  ),
+                                );
+                              }
                               final idx = _filteredIndices[i];
                               return _buildCard(idx);
                             },
@@ -216,7 +313,6 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
     final isPending = b.status == 'Pending';
     final isOngoing = b.status == 'Ongoing';
     final isReady = b.status == 'Ready';
-    final isCompleted = b.status == 'Completed';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -265,12 +361,21 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               ),
             ),
             const SizedBox(height: 6),
-            _iconRow(Icons.local_laundry_service_outlined, b.service),
+            _iconRow(Icons.local_laundry_service_outlined, b.serviceType),
             const SizedBox(height: 4),
-            _iconRow(Icons.calendar_today_outlined, b.date),
+            _iconRow(Icons.calendar_today_outlined, _formatDateDisplay(b.pickupDate)),
+            const SizedBox(height: 4),
+            _iconRow(
+              b.deliveryType == 'delivery' 
+                ? Icons.delivery_dining_outlined 
+                : Icons.two_wheeler_outlined,
+              '${b.deliveryType == 'delivery' ? 'Delivery' : 'Pickup'} - ${_formatDateDisplay(b.deliveryDate.isNotEmpty ? b.deliveryDate : b.pickupDate)}',
+            ),
+            const SizedBox(height: 4),
+            _iconRow(Icons.scale_outlined, '${b.weightKg} kg'),
             const SizedBox(height: 10),
             Text(
-              'Estimated: ${b.cost}',
+              'Total: ₱${b.cost}',
               style: GoogleFonts.outfit(
                 fontSize: 15,
                 fontWeight: FontWeight.w700,
@@ -334,8 +439,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             return Padding(
               padding: EdgeInsets.only(right: i < steps.length - 1 ? 8 : 0),
               child: GestureDetector(
-                onTap: () {
+                onTap: () async {
+                  final newStatus = _stepToStatus(i);
+                  await AdminService.updateOrderStatus(b.orderId, newStatus);
+                  if (!mounted) return;
                   setState(() => _stepState[b.orderId] = i);
+                  await _loadOrders();
                 },
                 child: Container(
                   padding:
@@ -536,20 +645,26 @@ class _AdminBooking {
   final int    orderId;
   final String id;
   final String customer;
-  final String service;
-  final String date;
+  final String serviceType;
+  final String pickupDate;
+  final String deliveryDate;
+  final String deliveryType;
+  final String weightKg;
   final String cost;
   final String status;
-  final int    statusStep;
+  final String pickupAddress;
 
   const _AdminBooking({
     required this.orderId,
     required this.id,
     required this.customer,
-    required this.service,
-    required this.date,
+    required this.serviceType,
+    required this.pickupDate,
+    required this.deliveryDate,
+    required this.deliveryType,
+    required this.weightKg,
     required this.cost,
     required this.status,
-    required this.statusStep,
+    required this.pickupAddress,
   });
 }

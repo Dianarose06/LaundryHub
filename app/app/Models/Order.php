@@ -4,6 +4,9 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\Cache;
+use App\Services\BookingSummaryService;
+use Illuminate\Support\Carbon;
 
 class Order extends Model
 {
@@ -33,6 +36,33 @@ class Order extends Model
         ];
     }
 
+    protected static function boot()
+    {
+        parent::boot();
+
+        // Clear admin dashboard cache and update booking summary whenever an order is created, updated, or deleted
+        static::created(function ($order) {
+            static::invalidateAdminCache();
+            BookingSummaryService::updateSummary(Carbon::today());
+        });
+        
+        static::updated(function ($order) {
+            static::invalidateAdminCache();
+            BookingSummaryService::updateSummary(Carbon::today());
+        });
+        
+        static::deleted(function ($order) {
+            static::invalidateAdminCache();
+            BookingSummaryService::updateSummary(Carbon::today());
+        });
+    }
+
+    protected static function invalidateAdminCache(): void
+    {
+        Cache::forget('admin_stats');
+        Cache::forget('admin_analytics');
+    }
+
     public function user()
     {
         return $this->belongsTo(User::class);
@@ -43,3 +73,4 @@ class Order extends Model
         return $this->belongsTo(Service::class);
     }
 }
+

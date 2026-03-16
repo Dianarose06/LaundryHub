@@ -61,11 +61,11 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
               id: (m['id'] as num).toInt(),
               emoji: _emojiFor(name),
               name:  name,
-              description: m['description'] as String? ?? '',
+              description: (m['description']?.toString() ?? ''),
               price: '₱${priceVal.round()}/8kg',
               pricePerKg: priceVal,
-              category: m['category'] as String? ?? 'general',
-              imageUrl: m['image_url'] as String?,
+              category: (m['category']?.toString() ?? 'general'),
+              imageUrl: (m['image_url']?.toString()),
             );
           }).toList();
           _loadingServices = false;

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/order_service.dart';
+import '../services/service_service.dart';
 import 'login_screen.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
@@ -29,26 +30,40 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin {
+class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
   Map<String, dynamic>? _user;
   List<dynamic> _orders = [];
   bool _ordersLoading = true;
-
-  static const _serviceItems = [
-    {'emoji': '👕', 'name': 'Wash & Dry'},
-    {'emoji': '✨', 'name': 'Dry Clean'},
-    {'emoji': '👔', 'name': 'Wash & Iron'},
-    {'emoji': '🛏', 'name': 'Beddings'},
-  ];
+  List<dynamic> _services = [];
+  bool _servicesLoading = true;
+  AppLifecycleState? _lastLifecycleState;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadUser();
     _loadOrders();
+    _loadServices();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lastLifecycleState = state;
+    // Refresh orders when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('App resumed - refreshing customer orders');
+      _loadOrders();
+    }
   }
 
   @override
@@ -70,6 +85,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     setState(() {
       _orders = result['success'] == true ? result['data'] as List<dynamic> : [];
       _ordersLoading = false;
+    });
+  }
+
+  Future<void> _loadServices() async {
+    setState(() => _servicesLoading = true);
+    final result = await ServiceService.getServices();
+    if (!mounted) return;
+    setState(() {
+      _services = result['success'] == true ? result['data'] as List<dynamic> : [];
+      _servicesLoading = false;
     });
   }
 
@@ -267,6 +292,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         onRefresh: () async {
           await _loadUser();
           await _loadOrders();
+          await _loadServices();
         },
         color: _C.primary,
         child: CustomScrollView(
@@ -395,41 +421,64 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       _sectionHeader('Our Services', 'See all →',
         () => widget.onNavigateToTab?.call(2)),
       const SizedBox(height: 14),
-      GridView.builder(
-        shrinkWrap: true,
-        physics: const NeverScrollableScrollPhysics(),
-        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-          crossAxisCount: 4, mainAxisSpacing: 10,
-          crossAxisSpacing: 10, childAspectRatio: 0.85,
-        ),
-        itemCount: _serviceItems.length,
-        itemBuilder: (ctx, i) {
-          final svc = _serviceItems[i];
-          return GestureDetector(
-            onTap: () => widget.onNavigateToTab?.call(2),
-            child: Container(
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(14),
-                border: Border.all(color: _C.border, width: 1.5),
-                boxShadow: [BoxShadow(
-                  color: const Color(0xFF0F172A).withOpacity(0.05),
-                  blurRadius: 12, offset: const Offset(0, 3))],
+      _servicesLoading
+          ? SizedBox(
+              height: 120,
+              child: Center(
+                child: CircularProgressIndicator(color: _C.primary),
               ),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Text(svc['emoji']!, style: const TextStyle(fontSize: 32)),
-                  const SizedBox(height: 6),
-                  Text(svc['name']!, textAlign: TextAlign.center,
-                    style: GoogleFonts.dmSans(
-                      fontSize: 10, fontWeight: FontWeight.w600, color: _C.slate)),
-                ],
-              ),
-            ),
-          );
-        },
-      ),
+            )
+          : _services.isEmpty
+              ? SizedBox(
+                  height: 120,
+                  child: Center(
+                    child: Text('No services available',
+                      style: GoogleFonts.dmSans(color: _C.muted, fontSize: 12)),
+                  ),
+                )
+              : GridView.builder(
+                  key: ValueKey('services_${_services.length}'),
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 3,
+                    mainAxisSpacing: 16.0,
+                    crossAxisSpacing: 16.0,
+                    childAspectRatio: 1.0,
+                  ),
+                  itemCount: _services.isEmpty ? 0 : (_services.length > 3 ? 3 : _services.length),
+                  itemBuilder: (ctx, i) {
+                    final svc = _services[i] as Map<String, dynamic>;
+                    final name = svc['name'] as String? ?? '';
+                    final emoji = ServiceService.getServiceEmoji(name);
+                    final formattedName = ServiceService.formatServiceName(name);
+                    
+                    return GestureDetector(
+                      onTap: () => widget.onNavigateToTab?.call(2),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(color: _C.border, width: 1.5),
+                          boxShadow: [BoxShadow(
+                            color: const Color(0xFF0F172A).withOpacity(0.05),
+                            blurRadius: 12, offset: const Offset(0, 3))],
+                        ),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            Text(emoji, style: const TextStyle(fontSize: 40)),
+                            const SizedBox(height: 12),
+                            Text(formattedName, textAlign: TextAlign.center,
+                              style: GoogleFonts.dmSans(
+                                fontSize: 12, fontWeight: FontWeight.w600, color: _C.slate)),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
     ],
   );
 

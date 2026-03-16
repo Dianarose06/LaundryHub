@@ -26,37 +26,52 @@ class MyOrdersScreen extends StatefulWidget {
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
-class _MyOrdersScreenState extends State<MyOrdersScreen> {
-    // Emoji mapping for service types (match home_screen.dart)
+class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObserver {
+    // Emoji mapping for service types - match exact database service names
     String _getServiceEmoji(String serviceType) {
-      switch (serviceType.toLowerCase()) {
-        case 'wash-dry-fold':
-        case 'wash–dry–fold':
-          return '\u{1F9FA}';
-        case 'dry_clean':
-        case 'dry clean':
-        case 'dry cleaning':
-          return '\u2728';
-        case 'beddings':
-        case 'beddings & linens':
-          return '\u{1F6CF}';
-        case 'express wash':
-          return '\u26A1';
-        case 'soft wash':
-          return '\u{1F338}';
-        default:
-          return '\u{1F9FA}';
+      final normalized = serviceType.toLowerCase().trim();
+      
+      if (normalized.contains('wash-dry-fold') || normalized.contains('wash–dry–fold')) {
+        return '🧺'; // Laundry basket
+      } else if (normalized.contains('dry cleaning') || normalized.contains('dry clean')) {
+        return '✨'; // Sparkles
+      } else if (normalized.contains('beddings') || normalized.contains('linens')) {
+        return '🛏️'; // Bed
+      } else if (normalized.contains('express wash')) {
+        return '⚡'; // Lightning bolt
+      } else if (normalized.contains('soft wash')) {
+        return '🌸'; // Flower
       }
+      
+      return '🧺'; // Default laundry
     }
   List<dynamic> _orders = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _activeFilter = 'all';
+  AppLifecycleState? _lastLifecycleState;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _loadOrders();
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lastLifecycleState = state;
+    // Refresh orders when app comes back to foreground
+    if (state == AppLifecycleState.resumed) {
+      debugPrint('App resumed - refreshing customer orders on MyOrdersScreen');
+      _loadOrders();
+    }
   }
 
   Future<void> _loadOrders() async {
@@ -76,7 +91,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
       });
     } else {
       setState(() {
-        _errorMessage = result['message'] as String?;
+        _errorMessage = result['message']?.toString();
         _isLoading = false;
       });
     }
@@ -122,12 +137,35 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
   }
 
   String _formatServiceType(String serviceType) {
-    return serviceType
-        .replaceAll('_', ' ')
-        .split(' ')
-        .where((word) => word.isNotEmpty)
-        .map((word) => word[0].toUpperCase() + word.substring(1))
-        .join(' & ');
+    if (serviceType.isEmpty) return 'Unknown Service';
+    
+    // Trim and normalize underscores to spaces
+    String cleaned = serviceType.replaceAll('_', ' ').trim();
+    
+    // Check if original contains hyphens
+    bool hasHyphens = cleaned.contains('-');
+    
+    if (hasHyphens) {
+      // For hyphenated services like "Wash-Dry-Fold"
+      return cleaned
+          .split('-')
+          .map((part) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty) return '';
+            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+          })
+          .join('-');
+    } else {
+      // For space-separated services like "Soft Wash", "Dry Cleaning"
+      return cleaned
+          .split(' ')
+          .map((part) {
+            String trimmed = part.trim();
+            if (trimmed.isEmpty) return '';
+            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+          })
+          .join(' ');
+    }
   }
 
   //  Design-system status helpers 
@@ -395,7 +433,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> {
     const steps = ['Received', 'Washing', 'Drying', 'Ready'];
     final activeIdx = status == 'pending' ? 0
         : (status == 'in_progress' || status == 'processing' || status == 'ongoing') ? 1
-        : status == 'ready' ? 3 : 0;
+        : status == 'ready' ? 3
+        : status == 'completed' ? 4
+        : 0;
 
     return GestureDetector(
       onTap: () => _showOrderDetails(order),
