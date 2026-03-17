@@ -24,3 +24,6 @@ app/.git/
 # Temporary files
 *.tmp
 *.bak
+
+# Firebase credentials - NEVER commit this!
+app/storage/app/firebase-credentials.json

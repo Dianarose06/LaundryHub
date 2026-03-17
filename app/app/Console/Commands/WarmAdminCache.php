@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Order;
-use App\Models\User;
+use App\Models\Service;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
@@ -31,7 +31,7 @@ class WarmAdminCache extends Command
                     'revenue_today'  => (float) Order::whereDate('created_at', $today)
                                                      ->where('status', '!=', 'cancelled')
                                                      ->sum('total_price') ?? 0,
-                    'customer_count' => User::where('role', 'customer')
+                    'customer_count' => \App\Models\User::where('role', 'customer')
                                            ->select(DB::raw('COUNT(*) as cnt'))
                                            ->value('cnt') ?? 0,
                 ];

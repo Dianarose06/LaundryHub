@@ -23,7 +23,7 @@ class AdminController extends Controller
     private function getServiceEmoji(string $serviceName): string
     {
         $normalized = strtolower(trim($serviceName));
-        
+
         if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash–dry–fold')) {
             return '🧺';
         } elseif (str_contains($normalized, 'dry cleaning')) {
@@ -35,41 +35,35 @@ class AdminController extends Controller
         } elseif (str_contains($normalized, 'soft wash')) {
             return '🌸';
         }
-        
-        return '🧺'; // Default
+
+        return '🧺';
     }
 
     public function stats(Request $request)
     {
         $this->ensureAdmin($request);
 
-        // Cache stats for 5 minutes to avoid repeated heavy queries
         $stats = Cache::remember('admin_stats', 300, function () {
             $today = Carbon::today();
 
             return [
-                'total_bookings' => Order::select(DB::raw('COUNT(*) as cnt'))->value('cnt') ?? 0,
-                'pending_count'  => Order::where('status', 'pending')
-                                        ->select(DB::raw('COUNT(*) as cnt'))
-                                        ->value('cnt') ?? 0,
+                'total_bookings' => Order::count(),
+                'pending_count'  => Order::where('status', 'pending')->count(),
                 'revenue_today'  => (float) Order::whereDate('created_at', $today)
-                                                 ->where('status', '!=', 'cancelled')
-                                                 ->sum('total_price') ?? 0,
-                'customer_count' => User::where('role', 'customer')
-                                       ->select(DB::raw('COUNT(*) as cnt'))
-                                       ->value('cnt') ?? 0,
+                    ->where('status', '!=', 'cancelled')
+                    ->sum('total_price'),
+                'customer_count' => User::where('role', 'customer')->count(),
             ];
         });
 
         return response()->json($stats)
-            ->header('Cache-Control', 'public, max-age=300'); // 5 minutes
+            ->header('Cache-Control', 'public, max-age=300');
     }
 
     public function recentOrders(Request $request)
     {
         $this->ensureAdmin($request);
 
-        // Cache recent orders for 3 minutes
         $orders = Cache::remember('admin_recent_orders', 180, function () {
             return Order::with(['user', 'service'])
                 ->latest()
@@ -92,15 +86,14 @@ class AdminController extends Controller
         });
 
         return response()->json(['data' => $orders])
-            ->header('Cache-Control', 'public, max-age=180'); // 3 minutes
+            ->header('Cache-Control', 'public, max-age=180');
     }
 
     public function orders(Request $request)
     {
         $this->ensureAdmin($request);
 
-        $perPage = (int)$request->query('per_page', 20);
-        $perPage = min($perPage, 100); // Cap at 100 to prevent abuse
+        $perPage = min((int)$request->query('per_page', 20), 100);
 
         $query = Order::with(['user', 'service'])->latest();
 
@@ -176,21 +169,22 @@ class AdminController extends Controller
     {
         $this->ensureAdmin($request);
 
-        // Cache analytics for 10 minutes since it's less frequently accessed than stats
         $data = Cache::remember('admin_analytics', 600, function () {
+
             $now = Carbon::now();
 
-            // ── Weekly revenue (Mon–Sun of current week) ──────────────────────────
             $weekStart = $now->copy()->startOfWeek(Carbon::MONDAY);
+
             $weeklyRevenue = [];
+
             for ($i = 0; $i < 7; $i++) {
                 $day = $weekStart->copy()->addDays($i);
+
                 $weeklyRevenue[] = (float) Order::whereDate('created_at', $day)
                     ->where('status', '!=', 'cancelled')
                     ->sum('total_price');
             }
 
-            // ── Service breakdown: use database grouping instead of loading all orders into memory
             $serviceBreakdown = Order::select(
                     DB::raw('services.name as service_name'),
                     DB::raw('COUNT(*) as order_count')
@@ -203,31 +197,37 @@ class AdminController extends Controller
 
             $totalOrders = $serviceBreakdown->sum('order_count');
 
-            // Build top 3 + Others
             $top3 = [];
             $othersCount = 0;
 
             foreach ($serviceBreakdown as $index => $item) {
+
                 if ($index < 3) {
+
                     $top3[] = [
                         'name'  => $item->service_name ?? 'Unknown',
                         'count' => $item->order_count,
                         'pct'   => $totalOrders > 0 ? (int) round($item->order_count / $totalOrders * 100) : 0,
                     ];
+
                 } else {
+
                     $othersCount += $item->order_count;
+
                 }
+
             }
 
             if ($othersCount > 0) {
+
                 $top3[] = [
                     'name'  => 'Others',
                     'count' => $othersCount,
                     'pct'   => $totalOrders > 0 ? (int) round($othersCount / $totalOrders * 100) : 0,
                 ];
+
             }
 
-            // ── Monthly revenue ────────────────────────────────────────────────────
             $monthlyRevenue = (float) Order::whereMonth('created_at', $now->month)
                 ->whereYear('created_at', $now->year)
                 ->where('status', '!=', 'cancelled')
@@ -242,43 +242,6 @@ class AdminController extends Controller
         });
 
         return response()->json($data)
-            ->header('Cache-Control', 'public, max-age=600'); // 10 minutes
-    }
-
-    public function bookingSummaries(Request $request)
-    {
-        $this->ensureAdmin($request);
-
-        $days = (int)$request->query('days', 30); // Default last 30 days
-        $days = min($days, 365); // Cap at 1 year
-
-        $fromDate = Carbon::today()->subDays($days - 1);
-
-        $summaries = \App\Models\BookingSummary::whereBetween(
-                'summary_date',
-                [$fromDate, Carbon::today()]
-            )
-            ->orderBy('summary_date', 'desc')
-            ->get()
-            ->map(fn ($summary) => [
-                'date' => $summary->summary_date->format('Y-m-d'),
-                'total_bookings' => $summary->total_bookings,
-                'requested' => $summary->requested_bookings,
-                'accepted' => $summary->accepted_bookings,
-                'declined' => $summary->declined_bookings,
-                'completed' => $summary->completed_bookings,
-                'cancelled' => $summary->cancelled_bookings,
-                'revenue' => (float)$summary->total_revenue,
-                'weight_kg' => (float)$summary->total_weight_kg,
-            ]);
-
-        return response()->json([
-            'data' => $summaries,
-            'range' => [
-                'from' => $fromDate->format('Y-m-d'),
-                'to' => Carbon::today()->format('Y-m-d'),
-                'days' => $days,
-            ],
-        ]);
+            ->header('Cache-Control', 'public, max-age=600');
     }
 }

@@ -7,6 +7,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Cache;
 use App\Services\BookingSummaryService;
 use Illuminate\Support\Carbon;
+use App\Models\Service;
 
 class Order extends Model
 {
@@ -65,7 +66,7 @@ class Order extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(\App\Models\User::class);
     }
 
     public function service()
