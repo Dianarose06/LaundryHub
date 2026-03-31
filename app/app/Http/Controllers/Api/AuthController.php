@@ -14,14 +14,35 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private function formatRegisteredName(array $validated): string
+    {
+        $firstName = isset($validated['first_name']) ? trim($validated['first_name']) : '';
+        $lastName = isset($validated['last_name']) ? trim($validated['last_name']) : '';
+        $middleInitial = isset($validated['middle_initial']) ? strtoupper(trim($validated['middle_initial'])) : '';
+        $fallbackName = trim((string) ($validated['name'] ?? ''));
+
+        if ($firstName !== '' && $lastName !== '') {
+            return $middleInitial !== ''
+                ? "{$lastName}, {$firstName} {$middleInitial}."
+                : "{$lastName}, {$firstName}";
+        }
+
+        return $fallbackName;
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([
-            'name'                  => 'required|string|max:255',
+            'name'                  => ['required_without_all:first_name,last_name', 'string', 'max:255', 'regex:/\S/'],
+            'first_name'            => ['required_without:name', 'string', 'max:255', 'regex:/\S/'],
+            'last_name'             => ['required_without:name', 'string', 'max:255', 'regex:/\S/'],
+            'middle_initial'        => ['nullable', 'string', 'size:1', 'regex:/^[A-Za-z]$/'],
             'email'                 => 'required|string|email|max:255|unique:users',
             'password'              => 'required|string|min:8|confirmed',
             'phone'                 => 'nullable|string|max:20',
         ]);
+
+        $formattedName = $this->formatRegisteredName($validated);
 
         // Check if email was verified during registration process
         $isEmailVerified = Cache::get("email_verified_{$validated['email']}");
@@ -37,7 +58,7 @@ class AuthController extends Controller
 
         // Create user with verified email
         $user = User::create([
-            'name'              => $validated['name'],
+            'name'              => $formattedName,
             'email'             => $validated['email'],
             'password'          => $validated['password'],
             'phone'             => $validated['phone'] ?? null,

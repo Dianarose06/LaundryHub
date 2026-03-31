@@ -13,20 +13,22 @@ class RegisterScreen extends StatefulWidget {
 
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
-  final _nameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _firstNameController = TextEditingController();
+  final _middleInitialController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
   final _codeControllers = List.generate(6, (index) => TextEditingController());
   final _codeFocusNodes = List.generate(6, (index) => FocusNode());
-  
+
   bool _isLoading = false;
   bool _obscurePassword = true;
   bool _obscureConfirmPassword = true;
   bool _codeSent = false;
   bool _emailVerified = false;
-  
+
   // Timer management
   Timer? _timer;
   int _remainingSeconds = 60;
@@ -34,7 +36,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   void dispose() {
-    _nameController.dispose();
+    _lastNameController.dispose();
+    _firstNameController.dispose();
+    _middleInitialController.dispose();
     _emailController.dispose();
     _phoneController.dispose();
     _passwordController.dispose();
@@ -53,7 +57,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _remainingSeconds = 60;
     _canResend = false;
     _timer?.cancel();
-    
+
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         if (_remainingSeconds > 0) {
@@ -71,13 +75,16 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _sendVerificationCode() async {
-    if (_emailController.text.trim().isEmpty || !_emailController.text.trim().contains('@')) {
+    if (_emailController.text.trim().isEmpty ||
+        !_emailController.text.trim().contains('@')) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter a valid email address'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
@@ -102,7 +109,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(result['message'] ?? 'Code sent to your email'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       // Auto-focus first code field
@@ -115,7 +124,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(result['message'] ?? 'Failed to send code'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -123,7 +134,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   Future<void> _verifyCode() async {
     final code = _verificationCode;
-    
+
     if (code.length != 6) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -161,7 +172,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     } else {
@@ -170,7 +183,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(result['message'] ?? 'Invalid code'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -185,16 +200,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Please verify your email first'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       return;
     }
-    
+
     setState(() => _isLoading = true);
 
     final result = await AuthService.register(
-      name: _nameController.text.trim(),
+      firstName: _firstNameController.text.trim(),
+      lastName: _lastNameController.text.trim(),
+      middleInitial: _middleInitialController.text.trim(),
       email: _emailController.text.trim(),
       password: _passwordController.text,
       phone: _phoneController.text.trim(),
@@ -209,13 +228,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: const Text('Registration successful! You can now login.'),
           backgroundColor: Colors.green.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
-      
+
       await Future.delayed(const Duration(seconds: 1));
       if (!mounted) return;
-      
+
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -226,7 +247,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
           content: Text(result['message'] ?? 'Registration failed'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -339,32 +362,108 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 8),
                         const Text(
                           'Fill in the details below to create your account',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey,
-                          ),
+                          style: TextStyle(fontSize: 14, color: Colors.grey),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
 
-                        // Full Name
-                        TextFormField(
-                          controller: _nameController,
-                          decoration: InputDecoration(
-                            labelText: 'Full Name',
-                            prefixIcon: const Icon(Icons.person_outline),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
+                        // Name fields
+                        Row(
+                          children: [
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _lastNameController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: InputDecoration(
+                                  labelText: 'Last Name',
+                                  prefixIcon: const Icon(Icons.person_outline),
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Enter last name';
+                                  }
+                                  return null;
+                                },
+                              ),
                             ),
-                            filled: true,
-                            fillColor: Colors.grey.shade50,
-                          ),
-                          validator: (value) {
-                            if (value == null || value.isEmpty) {
-                              return 'Please enter your name';
-                            }
-                            return null;
-                          },
+                            const SizedBox(width: 12),
+                            Expanded(
+                              flex: 2,
+                              child: TextFormField(
+                                controller: _firstNameController,
+                                textCapitalization: TextCapitalization.words,
+                                decoration: InputDecoration(
+                                  labelText: 'First Name',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                validator: (value) {
+                                  if (value == null || value.trim().isEmpty) {
+                                    return 'Enter first name';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: TextFormField(
+                                controller: _middleInitialController,
+                                textCapitalization:
+                                    TextCapitalization.characters,
+                                maxLength: 1,
+                                decoration: InputDecoration(
+                                  labelText: 'MI',
+                                  hintText: 'Opt',
+                                  counterText: '',
+                                  border: OutlineInputBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                  filled: true,
+                                  fillColor: Colors.grey.shade50,
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.allow(
+                                    RegExp(r'[A-Za-z]'),
+                                  ),
+                                  LengthLimitingTextInputFormatter(1),
+                                ],
+                                onChanged: (value) {
+                                  final upper = value.toUpperCase();
+                                  if (upper != value) {
+                                    _middleInitialController.value =
+                                        _middleInitialController.value.copyWith(
+                                          text: upper,
+                                          selection: TextSelection.collapsed(
+                                            offset: upper.length,
+                                          ),
+                                        );
+                                  }
+                                },
+                                validator: (value) {
+                                  final trimmed = value?.trim() ?? '';
+                                  if (trimmed.isEmpty) {
+                                    return null;
+                                  }
+                                  if (!RegExp(
+                                    r'^[A-Za-z]$',
+                                  ).hasMatch(trimmed)) {
+                                    return '1 letter';
+                                  }
+                                  return null;
+                                },
+                              ),
+                            ),
+                          ],
                         ),
                         const SizedBox(height: 16),
 
@@ -380,7 +479,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   labelText: 'Email Address',
                                   prefixIcon: const Icon(Icons.email_outlined),
                                   suffixIcon: _emailVerified
-                                      ? const Icon(Icons.check_circle, color: Colors.green)
+                                      ? const Icon(
+                                          Icons.check_circle,
+                                          color: Colors.green,
+                                        )
                                       : null,
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
@@ -404,7 +506,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                             const SizedBox(width: 8),
                             if (!_emailVerified)
                               ElevatedButton(
-                                onPressed: _isLoading ? null : _sendVerificationCode,
+                                onPressed: _isLoading
+                                    ? null
+                                    : _sendVerificationCode,
                                 style: ElevatedButton.styleFrom(
                                   backgroundColor: const Color(0xFF1565C0),
                                   foregroundColor: Colors.white,
@@ -423,7 +527,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                         child: CircularProgressIndicator(
                                           strokeWidth: 2,
                                           valueColor:
-                                              AlwaysStoppedAnimation<Color>(Colors.white),
+                                              AlwaysStoppedAnimation<Color>(
+                                                Colors.white,
+                                              ),
                                         ),
                                       )
                                     : Text(_codeSent ? 'Resend' : 'Send Code'),
@@ -436,10 +542,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         if (_codeSent && !_emailVerified) ...[
                           const Text(
                             'Enter the 6-digit code sent to your email',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Colors.grey,
-                            ),
+                            style: TextStyle(fontSize: 13, color: Colors.grey),
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -491,7 +594,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               if (!_canResend)
                                 Row(
                                   children: [
-                                    const Icon(Icons.timer, size: 16, color: Colors.grey),
+                                    const Icon(
+                                      Icons.timer,
+                                      size: 16,
+                                      color: Colors.grey,
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Resend in $_remainingSeconds s',
@@ -546,7 +653,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     : Icons.visibility_outlined,
                               ),
                               onPressed: () {
-                                setState(() => _obscurePassword = !_obscurePassword);
+                                setState(
+                                  () => _obscurePassword = !_obscurePassword,
+                                );
                               },
                             ),
                             border: OutlineInputBorder(
@@ -581,8 +690,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     : Icons.visibility_outlined,
                               ),
                               onPressed: () {
-                                setState(() =>
-                                    _obscureConfirmPassword = !_obscureConfirmPassword);
+                                setState(
+                                  () => _obscureConfirmPassword =
+                                      !_obscureConfirmPassword,
+                                );
                               },
                             ),
                             border: OutlineInputBorder(
@@ -621,8 +732,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   width: 20,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
-                                    valueColor:
-                                        AlwaysStoppedAnimation<Color>(Colors.white),
+                                    valueColor: AlwaysStoppedAnimation<Color>(
+                                      Colors.white,
+                                    ),
                                   ),
                                 )
                               : const Text(
