@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter/material.dart';
 import '../config/api_config.dart';
 
 class ServiceService {
@@ -52,6 +53,25 @@ class ServiceService {
     }
 
     return '🧺'; // Default
+  }
+
+  /// Get Material Design icon for a service name
+  static IconData getServiceIcon(String serviceName) {
+    final normalized = serviceName.toLowerCase().trim();
+
+    if (normalized.contains('wash-dry-fold') || normalized.contains('wash–dry–fold')) {
+      return Icons.local_laundry_service;
+    } else if (normalized.contains('dry cleaning') || normalized.contains('dry clean')) {
+      return Icons.cleaning_services;
+    } else if (normalized.contains('beddings')) {
+      return Icons.bed;
+    } else if (normalized.contains('express wash')) {
+      return Icons.flash_on;
+    } else if (normalized.contains('soft wash')) {
+      return Icons.spa;
+    }
+
+    return Icons.local_laundry_service; // Default
   }
 
   /// Format service name properly

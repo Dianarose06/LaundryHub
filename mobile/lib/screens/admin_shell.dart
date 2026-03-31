@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'admin_dashboard_screen.dart';
 import 'admin_bookings_screen.dart';
+import 'admin_customers_screen.dart';
 import 'admin_analytics_screen.dart';
 import 'admin_services_screen.dart';
 
@@ -23,7 +24,7 @@ class _AdminShellState extends State<AdminShell> {
   late final _pages = <Widget>[
     AdminDashboardScreen(onViewAllBookings: () => setState(() => _selectedIndex = 1)),
     const AdminBookingsScreen(),
-    const _CustomersPlaceholder(),
+    const AdminCustomersScreen(),
     const AdminAnalyticsScreen(),
     const AdminServicesScreen(),
   ];
@@ -100,43 +101,4 @@ class _NavItem {
   final IconData icon;
   final String label;
   const _NavItem({required this.icon, required this.label});
-}
-
-class _CustomersPlaceholder extends StatelessWidget {
-  const _CustomersPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const Icon(Icons.people_rounded, size: 64,
-                  color: Color(0xFF94A3B8)),
-              const SizedBox(height: 16),
-              Text(
-                'Customers',
-                style: GoogleFonts.outfit(
-                  fontSize: 20,
-                  fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F172A),
-                ),
-              ),
-              const SizedBox(height: 4),
-              Text(
-                'Coming soon',
-                style: GoogleFonts.dmSans(
-                  fontSize: 14,
-                  color: const Color(0xFF94A3B8),
-                ),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
 }

@@ -1,6 +1,7 @@
 ﻿import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/order_service.dart';
+import '../services/service_service.dart';
 
 // ignore_for_file: constant_identifier_names
 class _M {
@@ -27,23 +28,11 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObserver {
-    // Emoji mapping for service types - match exact database service names
+    // Removed emoji mapping - using ServiceService.getServiceIcon() instead
     String _getServiceEmoji(String serviceType) {
-      final normalized = serviceType.toLowerCase().trim();
-      
-      if (normalized.contains('wash-dry-fold') || normalized.contains('wash–dry–fold')) {
-        return '🧺'; // Laundry basket
-      } else if (normalized.contains('dry cleaning') || normalized.contains('dry clean')) {
-        return '✨'; // Sparkles
-      } else if (normalized.contains('beddings') || normalized.contains('linens')) {
-        return '🛏️'; // Bed
-      } else if (normalized.contains('express wash')) {
-        return '⚡'; // Lightning bolt
-      } else if (normalized.contains('soft wash')) {
-        return '🌸'; // Flower
-      }
-      
-      return '🧺'; // Default laundry
+      // This method is kept for backward compatibility but returns empty string
+      // Icons are now displayed using Material Design icons
+      return '';
     }
   List<dynamic> _orders = [];
   bool _isLoading = true;
@@ -423,8 +412,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     final serviceType = order['service_type'] ?? '';
     final orderId = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
     final svcName = _formatServiceType(serviceType);
-    // Get emoji from API response, fallback to local mapping if not present
-    final emoji = (order['service_emoji'] ?? _getServiceEmoji(serviceType)).toString();
+    // Get icon from service name
+    final icon = ServiceService.getServiceIcon(serviceType);
     final isActive = status == 'ongoing' || status == 'pending' ||
         status == 'ready' || status == 'in_progress' || status == 'processing';
     final isCompleted = status == 'completed' || status == 'cancelled';
@@ -454,15 +443,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header row with emoji
+              // Header row with icon
               Row(
                 children: [
                   Container(
                     margin: const EdgeInsets.only(right: 10),
-                    child: Text(
-                      emoji,
-                      style: const TextStyle(fontSize: 28),
-                    ),
+                    child: Icon(icon, size: 28, color: _M.primary),
                   ),
                   Expanded(
                     child: Row(
@@ -651,9 +637,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                       color: const Color(0xFF1565C0).withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: Text(
-                      _getServiceEmoji(order['service_type'] ?? ''),
-                      style: const TextStyle(fontSize: 28),
+                    child: Icon(
+                      ServiceService.getServiceIcon(order['service_type'] ?? ''),
+                      size: 28,
+                      color: const Color(0xFF1565C0),
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -696,9 +683,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                   children: [
                     Row(
                       children: [
-                        Text(
-                          _getServiceEmoji(order['service_type'] ?? ''),
-                          style: const TextStyle(fontSize: 22),
+                        Icon(
+                          ServiceService.getServiceIcon(order['service_type'] ?? ''),
+                          size: 22,
+                          color: _M.primary,
                         ),
                         const SizedBox(width: 10),
                         Text(

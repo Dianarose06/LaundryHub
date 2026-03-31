@@ -4,7 +4,9 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/admin_shell.dart';
+import 'screens/edit_profile_screen.dart';
 import 'services/auth_service.dart';
+import 'models/profile_model.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +39,16 @@ class LaundryHubApp extends StatelessWidget {
         useMaterial3: true,
       ),
       home: const _SplashGate(),
+      onGenerateRoute: (settings) {
+        if (settings.name == '/edit-profile') {
+          final args = settings.arguments as CustomerProfile?;
+          return MaterialPageRoute(
+            builder: (context) => EditProfileScreen(profile: args),
+            settings: settings,
+          );
+        }
+        return null;
+      },
     );
   }
 }

@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ServiceController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\CustomerProfileController;
 
 // Public auth routes with rate limiting
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:5,15');
@@ -22,6 +23,14 @@ Route::get('/services/{service}', [ServiceController::class, 'show']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/user', [AuthController::class, 'me']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    // Customer Profile Routes
+    Route::get('/profile', [CustomerProfileController::class, 'show']);
+    Route::put('/profile', [CustomerProfileController::class, 'update']);
+    Route::post('/profile/change-password', [CustomerProfileController::class, 'changePassword']);
+    Route::get('/profile/completion-status', [CustomerProfileController::class, 'completionStatus']);
+    Route::post('/profile/upload-picture', [CustomerProfileController::class, 'uploadProfilePicture']);
+
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);
     Route::get('/orders/{order}', [OrderController::class, 'show']);
@@ -41,4 +50,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/admin/services', [ServiceController::class, 'store']);
     Route::put('/admin/services/{service}', [ServiceController::class, 'update']);
     Route::delete('/admin/services/{service}', [ServiceController::class, 'destroy']);
+
+    // Admin customer profile routes
+    Route::get('/admin/customers', [AdminController::class, 'getCustomers']);
+    Route::get('/admin/customers/{userId}', [AdminController::class, 'getCustomerProfile']);
+    Route::put('/admin/customers/{userId}', [AdminController::class, 'updateCustomerProfile']);
+    Route::get('/admin/customers/{userId}/orders', [AdminController::class, 'getCustomerOrders']);
 });
+
+// Public profile route
+Route::get('/profile/{userId}', [CustomerProfileController::class, 'publicProfile']);

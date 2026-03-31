@@ -3,6 +3,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../services/order_service.dart';
+import '../services/service_service.dart';
 import '../config/api_config.dart';
 import 'booking_confirmed_screen.dart';
 
@@ -35,26 +36,16 @@ class _OrderScreenState extends State<OrderScreen> {
   double _estimatedKg = 3.0;
   bool _loadingServices = true;
 
-  static const _serviceEmojis = <String, String>{
-    'wash-dry-fold':       '🧺',
-    'wash–dry–fold':       '🧺',
-    'dry clean':           '✨',
-    'dry cleaning':        '✨',
-    'beddings':            '🛏',
-    'beddings & linens':   '🛏',
-    'express wash':        '⚡',
-    'soft wash':           '🌸',
-  };
-
+  // Removed emoji map - using ServiceService.getServiceIcon() instead
+  
   String _emojiFor(String name) =>
-      _serviceEmojis[name.toLowerCase()] ?? '🧺';
+      ''; // Placeholder - icons are used instead
 
   // â”€â”€ Existing business-logic state (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
   final _weightController = TextEditingController();
-  final _instructionsController = TextEditingController();
-  
+  final _instructionsController = TextEditingController();  final _customPriceController = TextEditingController();  
   int? _selectedServiceId;
   DateTime? _pickupDate;
   TimeOfDay? _pickupTime;
@@ -485,7 +476,7 @@ class _OrderScreenState extends State<OrderScreen> {
                                 color: _K.primaryPale,
                                 borderRadius: BorderRadius.circular(14),
                               ),
-                              child: Center(child: _serviceEmoji(svc)),
+                              child: Center(child: _buildServiceIcon(svc)),
                             ),
                             const SizedBox(height: 10),
                             Text(svc['name'],
@@ -525,8 +516,10 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _serviceEmoji(Map<String, dynamic> svc) {
-    return Text(svc['emoji'] as String? ?? '🧺', style: const TextStyle(fontSize: 26));
+  Widget _buildServiceIcon(Map<String, dynamic> svc) {
+    final name = svc['name'] as String? ?? '';
+    final icon = ServiceService.getServiceIcon(name);
+    return Icon(icon, size: 26, color: _K.primary);
   }
 
   // â”€â”€ Step 2: Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€

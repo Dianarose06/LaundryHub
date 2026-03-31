@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
 import '../services/admin_service.dart';
+import '../services/service_service.dart';
 import 'login_screen.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
@@ -183,12 +184,14 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Widget
                          m['order_status']?.toString() ?? 
                          'Pending').trim();
           
+          final rawPrice = m['total_price'];
           final amount = (m['amount']?.toString() ?? 
                          m['total_price']?.toString() ?? 
                          m['price']?.toString() ?? 
                          '0').trim();
           
-          debugPrint('Parsed Order: id=$id, customer=$customer, service=$service, status=$status, amount=$amount');
+          debugPrint('🔍 Parsed Order: id=$id, customer=$customer, service=$service, status=$status');
+          debugPrint('💰 RAW total_price: $rawPrice (type: ${rawPrice.runtimeType}), STRING amount: $amount');
           
           return _BookingRow(
             orderId: orderId,
@@ -699,7 +702,9 @@ class _BookingRowWidget extends StatelessWidget {
       // Remove any currency symbols first
       String cleanAmount = booking.amount.replaceAll(RegExp(r'[₱\s]'), '');
       final value = double.parse(cleanAmount);
-      return '₱${value.toStringAsFixed(2)}';
+      final formatted = '₱${value.toStringAsFixed(2)}';
+      debugPrint('💵 Format: "$booking.amount" → clean="$cleanAmount" → parsed=$value → formatted=$formatted');
+      return formatted;
     } catch (_) {
       // If already formatted or invalid, return as-is with peso sign if not present
       if (booking.amount.isEmpty || booking.amount == '0' || booking.amount == '--') {
@@ -739,11 +744,23 @@ class _BookingRowWidget extends StatelessWidget {
           ),
           Expanded(
             flex: 3,
-            child: Text(
-              booking.service.isNotEmpty ? booking.service : 'N/A',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.dmSans(fontSize: 12, color: _muted),
+            child: Row(
+              children: [
+                Icon(
+                  ServiceService.getServiceIcon(booking.service),
+                  size: 16,
+                  color: const Color(0xFF2563EB),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    booking.service.isNotEmpty ? booking.service : 'N/A',
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: GoogleFonts.dmSans(fontSize: 12, color: _muted),
+                  ),
+                ),
+              ],
             ),
           ),
           Expanded(

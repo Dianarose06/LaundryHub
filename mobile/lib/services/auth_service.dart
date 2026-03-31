@@ -33,7 +33,8 @@ class AuthService {
         return {
           'success': false,
           'user_not_found': true,
-          'message': data['message'] ?? 'Account not found. Please register first.',
+          'message':
+              data['message'] ?? 'Account not found. Please register first.',
         };
       }
 
@@ -55,18 +56,34 @@ class AuthService {
   }
 
   static Future<Map<String, dynamic>> register({
-    required String name,
+    required String firstName,
+    required String lastName,
+    String? middleInitial,
     required String email,
     required String password,
     String? phone,
   }) async {
     try {
+      final normalizedFirstName = firstName.trim();
+      final normalizedLastName = lastName.trim();
+      final normalizedMiddleInitial =
+          (middleInitial != null && middleInitial.trim().isNotEmpty)
+          ? middleInitial.trim().substring(0, 1).toUpperCase()
+          : null;
+
+      final formattedName = normalizedMiddleInitial != null
+          ? '$normalizedLastName, $normalizedFirstName $normalizedMiddleInitial.'
+          : '$normalizedLastName, $normalizedFirstName';
+
       final body = {
-        'name': name,
+        'name': formattedName,
+        'first_name': normalizedFirstName,
+        'last_name': normalizedLastName,
+        'middle_initial': normalizedMiddleInitial,
         'email': email,
         'password': password,
         'password_confirmation': password,
-        if (phone != null && phone.isNotEmpty) 'phone': phone,
+        'phone': (phone != null && phone.isNotEmpty) ? phone : null,
       };
 
       final response = await http.post(
@@ -98,10 +115,7 @@ class AuthService {
     }
   }
 
-  static Future<void> _saveSession(
-    String token,
-    dynamic user,
-  ) async {
+  static Future<void> _saveSession(String token, dynamic user) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
     await prefs.setString(_userKey, jsonEncode(user));
@@ -207,9 +221,7 @@ class AuthService {
     }
   }
 
-  static Future<Map<String, dynamic>> sendVerificationCode(
-    String email,
-  ) async {
+  static Future<Map<String, dynamic>> sendVerificationCode(String email) async {
     try {
       final response = await http.post(
         Uri.parse('$_baseUrl/send-verification-code'),

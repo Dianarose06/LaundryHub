@@ -10,7 +10,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-
+  
+  path_provider: ^2.1.2    # ← moved here, same level as other packages
   cupertino_icons: ^1.0.8
   http: ^1.2.0
   shared_preferences: ^2.2.0
@@ -19,6 +20,10 @@ dependencies:
   firebase_core: ^4.5.0
   firebase_messaging: ^16.1.2
   flutter_local_notifications: ^21.0.0
+  dio: ^5.3.0
+  image_picker: ^1.0.0
+  image: ^4.1.0
+  crypto: ^3.0.0
 
 dev_dependencies:
   flutter_test:

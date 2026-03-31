@@ -216,31 +216,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   String _fmtServiceName(String s) => s;
 
-  String _serviceEmoji(String t) {
-    switch (t.toLowerCase()) {
-      case 'wash-dry-fold':
-      case 'wash–dry–fold':
-        return '🧺';
-      case 'dry clean':
-      case 'dry_clean':
-      case 'dry cleaning':
-      case 'dry_cleaning':
-        return '✨';
-      case 'beddings':
-      case 'beddings & linens':
-        return '🛏';
-      case 'express wash':
-      case 'express_wash':
-        return '⚡';
-      case 'soft wash':
-        return '🌸';
-      case 'premium care':
-      case 'premium_care':
-        return '✨';
-      default:
-        return '🧺';
-    }
-  }
+  // Removed - using ServiceService.getServiceIcon() instead
+  @deprecated
+  String _serviceEmoji(String t) => '';
 
   String _fmtOrderDate(String? d) {
     if (d == null) return 'N/A';
@@ -450,7 +428,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   itemBuilder: (ctx, i) {
                     final svc = _services[i] as Map<String, dynamic>;
                     final name = svc['name'] as String? ?? '';
-                    final emoji = ServiceService.getServiceEmoji(name);
+                    final icon = ServiceService.getServiceIcon(name);
                     final formattedName = ServiceService.formatServiceName(name);
                     
                     return GestureDetector(
@@ -468,7 +446,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           mainAxisAlignment: MainAxisAlignment.center,
                           crossAxisAlignment: CrossAxisAlignment.center,
                           children: [
-                            Text(emoji, style: const TextStyle(fontSize: 40)),
+                            Icon(icon, size: 40, color: _C.primary),
                             const SizedBox(height: 12),
                             Text(formattedName, textAlign: TextAlign.center,
                               style: GoogleFonts.dmSans(
