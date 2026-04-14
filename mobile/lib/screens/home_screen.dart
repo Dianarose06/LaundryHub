@@ -335,7 +335,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   ),
                   Row(
                     children: [
-                      _headerBtn(Icons.notifications_outlined, onTap: () {}),
+                      _headerBtn(Icons.notifications_outlined,
+                        onTap: () => widget.onNavigateToTab?.call(3)),
                       const SizedBox(width: 8),
                       _headerBtn(Icons.logout_rounded, onTap: _confirmLogout),
                     ],

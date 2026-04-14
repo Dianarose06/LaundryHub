@@ -55,7 +55,7 @@ class CustomerProfile {
         dateOfBirth: json['date_of_birth'] as String?,
         gender: json['gender'] as String?,
         preferredLanguage: json['preferred_language'] as String? ?? 'en',
-        notificationsEnabled: (json['notifications_enabled'] as dynamic?) == true || json['notifications_enabled'] == 1,
+        notificationsEnabled: json['notifications_enabled'] == true || json['notifications_enabled'] == 1,
         loyaltyPoints: json['loyalty_points'] as int? ?? 0,
         emailVerifiedAt: json['email_verified_at'] as String?,
         profileCompletedAt: json['profile_completed_at'] as String?,

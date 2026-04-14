@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'home_screen.dart';
 import 'my_orders_screen.dart';
+import 'notifications_screen.dart';
 import 'order_screen.dart';
 import 'profile_screen.dart';
 
@@ -31,7 +32,7 @@ class _MainShellState extends State<MainShell> {
       HomeScreen(onNavigateToTab: (index) => setState(() => _selectedIndex = index)),
       const MyOrdersScreen(),
       OrderScreen(onBack: () => setState(() => _selectedIndex = 0)),
-      const _AlertsPlaceholder(),
+      const NotificationsScreen(),
       const ProfileScreen(),
     ];
   }
@@ -178,31 +179,3 @@ class _NavItem {
   const _NavItem({required this.icon, required this.label, required this.pageIdx});
 }
 
-// ── Alerts placeholder (no screen exists yet per sprint plan) ─────────────────
-class _AlertsPlaceholder extends StatelessWidget {
-  const _AlertsPlaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFFF8FAFC),
-      body: SafeArea(
-        child: Center(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Icon(Icons.notifications_none_rounded,
-                  size: 64, color: Color(0xFF94A3B8)),
-              SizedBox(height: 16),
-              Text('No notifications yet',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Color(0xFF94A3B8),
-                  )),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-}

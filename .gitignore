@@ -1,6 +1,9 @@
 # Database files (MySQL data)
 /database/
 
+# Laravel storage symlink
+app/public/storage
+
 # Docker
 .env
 docker-compose.override.yml

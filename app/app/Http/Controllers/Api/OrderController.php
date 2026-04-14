@@ -4,11 +4,109 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Models\User;
+use App\Notifications\AdminNewOrderPlaced;
+use App\Notifications\OrderConfirmation;
+use App\Notifications\OrderRefundInitiated;
+use App\Notifications\OrderStatusUpdated;
 use App\Models\Service;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Log;
 
 class OrderController extends Controller
 {
+    private function isEmailNotificationEnabled(User $user): bool
+    {
+        return !empty($user->email) && $user->notifications_enabled !== false;
+    }
+
+    private function sendAdminNewOrderEmail(Order $order): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $admins = User::where('role', 'admin')
+            ->whereNotNull('email')
+            ->where('notifications_enabled', true)
+            ->get();
+
+        foreach ($admins as $admin) {
+            try {
+                $admin->notify(new AdminNewOrderPlaced($order));
+            } catch (\Throwable $exception) {
+                Log::warning('Unable to send admin new-order email.', [
+                    'order_id' => $order->id,
+                    'admin_id' => $admin->id,
+                    'error' => $exception->getMessage(),
+                ]);
+            }
+        }
+    }
+
+    private function sendOrderConfirmationEmail(Order $order): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderConfirmation($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send order confirmation email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendOrderStatusEmail(Order $order, string $previousStatus, string $nextStatus): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderStatusUpdated($order, $previousStatus, $nextStatus));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send order status email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'from_status' => $previousStatus,
+                'to_status' => $nextStatus,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendRefundInitiatedEmail(Order $order, string $reason): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderRefundInitiated($order, $reason));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send refund-initiated email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
     private function getServiceEmoji(string $serviceName): string
     {
         $normalized = strtolower(trim($serviceName));
@@ -89,6 +187,9 @@ class OrderController extends Controller
 
         $order->load('service');
 
+        $this->sendOrderConfirmationEmail($order);
+        $this->sendAdminNewOrderEmail($order);
+
         return response()->json(['data' => $order], 201);
     }
 
@@ -109,13 +210,16 @@ class OrderController extends Controller
             return response()->json(['message' => 'Forbidden.'], 403);
         }
 
-        if (! in_array($order->status, ['pending', 'processing', 'ready'])) {
+        if (! in_array($order->status, ['pending', 'ongoing', 'ready'])) {
             return response()->json([
                 'message' => 'Orders that are completed or already cancelled cannot be cancelled.',
             ], 422);
         }
 
+        $previousStatus = $order->status;
         $order->update(['status' => 'cancelled']);
+        $this->sendOrderStatusEmail($order, $previousStatus, 'cancelled');
+        $this->sendRefundInitiatedEmail($order, 'Order was cancelled by customer.');
 
         return response()->json(['data' => $order]);
     }

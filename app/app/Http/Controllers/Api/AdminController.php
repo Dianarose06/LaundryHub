@@ -4,16 +4,134 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Order;
+use App\Notifications\OrderDeliveryScheduled;
+use App\Notifications\OrderPaymentReceipt;
+use App\Notifications\OrderReadyForPickup;
+use App\Notifications\OrderRefundInitiated;
+use App\Notifications\OrderStatusUpdated;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Validation\Rule;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class AdminController extends Controller
 {
     private const LOYALTY_POINTS_PER_100_PHP = 1;
+
+    private function isEmailNotificationEnabled(User $user): bool
+    {
+        return !empty($user->email) && $user->notifications_enabled !== false;
+    }
+
+    private function sendPaymentReceiptEmail(Order $order): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderPaymentReceipt($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send payment receipt email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendReadyForPickupEmail(Order $order): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderReadyForPickup($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send ready-for-pickup email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendDeliveryScheduledEmail(Order $order): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderDeliveryScheduled($order));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send delivery-scheduled email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendRefundInitiatedEmail(Order $order, string $reason): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderRefundInitiated($order, $reason));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send refund-initiated email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
+
+    private function sendOrderStatusEmail(Order $order, string $previousStatus, string $nextStatus): void
+    {
+        $order->loadMissing(['user', 'service']);
+
+        $user = $order->user;
+
+        if (!$user || !$this->isEmailNotificationEnabled($user)) {
+            return;
+        }
+
+        try {
+            $user->notify(new OrderStatusUpdated($order, $previousStatus, $nextStatus));
+        } catch (\Throwable $exception) {
+            Log::warning('Unable to send order status email.', [
+                'order_id' => $order->id,
+                'user_id' => $user->id,
+                'from_status' => $previousStatus,
+                'to_status' => $nextStatus,
+                'error' => $exception->getMessage(),
+            ]);
+        }
+    }
 
     private function formatDisplayName(string $firstName, string $lastName, ?string $middleInitial = null): string
     {
@@ -167,10 +285,27 @@ class AdminController extends Controller
         if ($previousStatus !== $nextStatus) {
             $order->update(['status' => $nextStatus]);
 
+            $this->sendOrderStatusEmail($order, $previousStatus, $nextStatus);
+
+            if ($nextStatus === 'ready') {
+                if (($order->delivery_type ?? 'pickup') === 'delivery') {
+                    $this->sendDeliveryScheduledEmail($order);
+                } else {
+                    $this->sendReadyForPickupEmail($order);
+                }
+            }
+
+            if ($nextStatus === 'cancelled') {
+                $this->sendRefundInitiatedEmail($order, 'Order was cancelled by admin.');
+            }
+
             // Award points only on first transition into completed state.
             if ($previousStatus !== 'completed' && $nextStatus === 'completed') {
                 $awardedPoints = $this->calculateLoyaltyPointsForOrder($order);
                 $order->user()->increment('loyalty_points', $awardedPoints);
+
+                // Send payment receipt email when order is completed and payment received
+                $this->sendPaymentReceiptEmail($order);
             }
         }
 
