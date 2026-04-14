@@ -35,8 +35,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
     try {
-      final profile = await _profileService.getProfile();
-      final completionStatus = await _profileService.getCompletionStatus();
+      final batch = await _profileService.getProfileBatch();
+      final profile = batch['profile'] as CustomerProfile;
+      final completionStatus =
+          batch['completionStatus'] as ProfileCompletionStatus;
       if (mounted) {
         setState(() {
           _profile = profile;

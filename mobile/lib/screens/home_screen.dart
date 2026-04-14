@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/auth_service.dart';
+import '../services/batch_service.dart';
 import '../services/order_service.dart';
 import '../services/service_service.dart';
 import 'login_screen.dart';
@@ -45,9 +46,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadUser();
-    _loadOrders();
-    _loadServices();
+    _loadHomeBatch();
   }
 
   @override
@@ -76,6 +75,44 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   Future<void> _loadUser() async {
     final user = await AuthService.getUser();
     if (mounted) setState(() => _user = user);
+  }
+
+  Future<void> _loadHomeBatch() async {
+    setState(() {
+      _ordersLoading = true;
+      _servicesLoading = true;
+    });
+
+    final result = await BatchService.getHomeBatch(
+      ordersLimit: 20,
+      notificationsLimit: 5,
+      includeServices: true,
+    );
+
+    if (!mounted) return;
+
+    if (result['success'] == true) {
+      final data = result['data'] as Map<String, dynamic>? ?? {};
+      final user = data['user'];
+      final orders = data['orders'];
+      final services = data['services'];
+
+      setState(() {
+        _user = user is Map
+            ? Map<String, dynamic>.from(user as Map<dynamic, dynamic>)
+            : null;
+        _orders = orders is List ? List<dynamic>.from(orders) : [];
+        _services = services is List ? List<dynamic>.from(services) : [];
+        _ordersLoading = false;
+        _servicesLoading = false;
+      });
+      return;
+    }
+
+    // Fallback to existing endpoints if batch fails for any reason.
+    await _loadUser();
+    await _loadOrders();
+    await _loadServices();
   }
 
   Future<void> _loadOrders() async {
@@ -268,9 +305,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       backgroundColor: _C.surface,
       body: RefreshIndicator(
         onRefresh: () async {
-          await _loadUser();
-          await _loadOrders();
-          await _loadServices();
+          await _loadHomeBatch();
         },
         color: _C.primary,
         child: CustomScrollView(

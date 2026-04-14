@@ -68,6 +68,70 @@ class ProfileService {
     }
   }
 
+  /// Get profile dashboard payload in one call
+  Future<Map<String, dynamic>> getProfileBatch({
+    int recentOrdersLimit = 5,
+    int notificationsLimit = 5,
+  }) async {
+    try {
+      final token = await AuthService.getToken();
+
+      final response = await _dio.get(
+        '$baseUrl/batch/profile',
+        queryParameters: {
+          'recent_orders_limit': recentOrdersLimit,
+          'notifications_limit': notificationsLimit,
+        },
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode != 200) {
+        throw Exception('Failed to load profile batch: ${response.statusCode}');
+      }
+
+      final payload = response.data['data'] as Map<String, dynamic>? ?? {};
+      final profileMap =
+          Map<String, dynamic>.from(payload['profile'] as Map? ?? const {});
+      final completionMap = Map<String, dynamic>.from(
+        payload['completion_status'] as Map? ??
+            const {
+              'completed_percentage': 0,
+              'total_fields': 0,
+              'completed_fields': 0,
+              'fields': <String, bool>{},
+              'is_profile_complete': false,
+            },
+      );
+
+      if (profileMap['profile_picture_url'] != null) {
+        profileMap['profile_picture_url'] = _buildImageUrl(
+          profileMap['profile_picture_url'] as String?,
+        );
+      }
+
+      return {
+        'profile': CustomerProfile.fromJson(profileMap),
+        'completionStatus': ProfileCompletionStatus.fromJson(completionMap),
+        'recentOrders': List<Map<String, dynamic>>.from(
+          payload['recent_orders'] as List? ?? const [],
+        ),
+        'notificationSummary': Map<String, dynamic>.from(
+          payload['notification_summary'] as Map? ?? const {},
+        ),
+      };
+    } on Exception catch (e) {
+      throw Exception('Error loading profile batch: ${e.toString()}');
+    } catch (e) {
+      throw Exception('Unexpected error loading profile batch: ${e.toString()}');
+    }
+  }
+
   /// Update user's profile
   Future<CustomerProfile> updateProfile({
     String? name,
