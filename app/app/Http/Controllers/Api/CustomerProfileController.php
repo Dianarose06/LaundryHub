@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Support\Facades\Storage;
 
 class CustomerProfileController extends Controller
 {
@@ -252,6 +253,40 @@ class CustomerProfileController extends Controller
             'success' => false,
             'message' => 'No file provided',
         ], 400);
+    }
+
+    /**
+     * Delete profile picture
+     */
+    public function deleteProfilePicture(Request $request): JsonResponse
+    {
+        $user = $request->user();
+
+        if (!$user->profile_picture_url) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No profile picture to delete',
+            ], 404);
+        }
+
+        // Delete file from storage if it exists
+        try {
+            $filePath = str_replace('storage/', '', $user->profile_picture_url);
+            if (Storage::disk('public')->exists($filePath)) {
+                Storage::disk('public')->delete($filePath);
+            }
+        } catch (\Exception $e) {
+            \Log::warning('Failed to delete profile picture file: ' . $e->getMessage());
+        }
+
+        // Clear the URL from database
+        $user->profile_picture_url = null;
+        $user->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile picture deleted successfully',
+        ]);
     }
 
     /**

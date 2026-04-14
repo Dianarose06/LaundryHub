@@ -30,6 +30,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('/profile/change-password', [CustomerProfileController::class, 'changePassword']);
     Route::get('/profile/completion-status', [CustomerProfileController::class, 'completionStatus']);
     Route::post('/profile/upload-picture', [CustomerProfileController::class, 'uploadProfilePicture']);
+    Route::delete('/profile/picture', [CustomerProfileController::class, 'deleteProfilePicture']);
 
     Route::get('/orders', [OrderController::class, 'index']);
     Route::post('/orders', [OrderController::class, 'store']);

@@ -285,4 +285,32 @@ class ProfileService {
       rethrow;
     }
   }
+
+  /// Delete profile picture
+  Future<void> deleteProfilePicture() async {
+    try {
+      final token = await AuthService.getToken();
+
+      final response = await _dio.delete(
+        '$baseUrl/profile/picture',
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode != 200 && response.statusCode != 204) {
+        throw Exception(
+          response.data['message'] ?? 'Failed to delete profile picture',
+        );
+      }
+    } on DioException catch (e) {
+      throw Exception(
+        e.response?.data['message'] ?? 'Failed to delete profile picture',
+      );
+    }
+  }
 }

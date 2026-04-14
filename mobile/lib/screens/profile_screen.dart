@@ -302,136 +302,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     confirmPasswordController.dispose();
   }
 
-  Future<void> _showNotificationSettingsDialog() async {
-    bool notificationsEnabled = _profile?.notificationsEnabled ?? true;
-    bool isSaving = false;
-
-    await showDialog<void>(
-      context: context,
-      barrierDismissible: !isSaving,
-      builder: (dialogContext) {
-        return StatefulBuilder(
-          builder: (context, setDialogState) {
-            Future<void> saveSettings() async {
-              setDialogState(() => isSaving = true);
-
-              try {
-                final updatedProfile = await _profileService.updateProfile(
-                  notificationsEnabled: notificationsEnabled,
-                );
-
-                if (!mounted) return;
-                setState(() {
-                  _profile = updatedProfile;
-                });
-
-                Navigator.of(dialogContext).pop();
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      notificationsEnabled
-                          ? 'Notifications enabled successfully.'
-                          : 'Notifications disabled successfully.',
-                    ),
-                    backgroundColor: Colors.green,
-                  ),
-                );
-              } catch (e) {
-                if (!mounted) return;
-                setDialogState(() => isSaving = false);
-                ScaffoldMessenger.of(this.context).showSnackBar(
-                  SnackBar(
-                    content: Text(e.toString().replaceFirst('Exception: ', '')),
-                    backgroundColor: Colors.red,
-                  ),
-                );
-              }
-            }
-
-            return AlertDialog(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              title: const Text(
-                'Notification Settings',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              content: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Manage your app notifications.',
-                    style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
-                  ),
-                  const SizedBox(height: 12),
-                  Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFF8FAFC),
-                      borderRadius: BorderRadius.circular(12),
-                      border: Border.all(color: const Color(0xFFE2E8F0)),
-                    ),
-                    child: SwitchListTile(
-                      value: notificationsEnabled,
-                      onChanged: isSaving
-                          ? null
-                          : (value) {
-                              setDialogState(
-                                () => notificationsEnabled = value,
-                              );
-                            },
-                      title: const Text(
-                        'Enable Notifications',
-                        style: TextStyle(
-                          fontWeight: FontWeight.w600,
-                          fontSize: 14,
-                        ),
-                      ),
-                      subtitle: Text(
-                        notificationsEnabled
-                            ? 'You will receive order and account updates.'
-                            : 'You will no longer receive app notifications.',
-                        style: const TextStyle(fontSize: 12),
-                      ),
-                      activeColor: const Color(0xFF1565C0),
-                    ),
-                  ),
-                ],
-              ),
-              actions: [
-                TextButton(
-                  onPressed: isSaving
-                      ? null
-                      : () => Navigator.pop(dialogContext),
-                  child: const Text('Cancel'),
-                ),
-                ElevatedButton(
-                  onPressed: isSaving ? null : saveSettings,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
-                  ),
-                  child: isSaving
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
-                        )
-                      : const Text(
-                          'Save',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                ),
-              ],
-            );
-          },
-        );
-      },
-    );
-  }
-
   Future<void> _showEmailVerificationDialog() async {
     final email = _user?['email']?.toString();
     if (email == null || email.isEmpty) {
@@ -650,6 +520,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
     codeController.dispose();
   }
 
+  Future<void> _showProfilePictureOptionsDialog() async {
+    if (_isUploadingProfilePicture) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Profile Picture',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text('What would you like to do?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          if (_profile?.profilePictureUrl != null)
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                _deleteProfilePicture();
+              },
+              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              child: const Text('Delete'),
+            ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _uploadProfilePicture();
+            },
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF1565C0),
+            ),
+            child: const Text(
+              'Change',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _uploadProfilePicture() async {
     if (_isUploadingProfilePicture) return;
 
@@ -736,6 +653,89 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to upload image: ${e.toString()}'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  Future<void> _deleteProfilePicture() async {
+    if (_isUploadingProfilePicture) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text(
+          'Delete Profile Picture',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        content: const Text(
+          'Are you sure you want to delete your profile picture? This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: Colors.grey.shade600),
+            ),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+            child: const Text(
+              'Delete',
+              style: TextStyle(color: Colors.white),
+            ),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true) return;
+
+    try {
+      if (!mounted) return;
+      setState(() => _isUploadingProfilePicture = true);
+
+      await _profileService.deleteProfilePicture();
+
+      if (!mounted) return;
+
+      // ✅ Clear Flutter's image cache
+      if (_profile?.profilePictureUrl != null) {
+        await NetworkImage(_profile!.profilePictureUrl!).evict();
+      }
+
+      // ✅ Update state and reload profile
+      setState(() {
+        _profile = _profile?.copyWith(profilePictureUrl: null);
+        _isUploadingProfilePicture = false;
+        _imageCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile picture deleted successfully.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+
+      // ✅ Reload profile to get fresh data
+      await _loadProfile();
+
+      if (mounted) {
+        setState(() {
+          _imageCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
+        });
+      }
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isUploadingProfilePicture = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to delete profile picture: ${e.toString()}'),
           backgroundColor: Colors.red,
         ),
       );
@@ -966,7 +966,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   child: InkWell(
                                     onTap: _isUploadingProfilePicture
                                         ? null
-                                        : _uploadProfilePicture,
+                                        : _showProfilePictureOptionsDialog,
                                     borderRadius: BorderRadius.circular(18),
                                     child: Container(
                                       width: 34,
