@@ -14,6 +14,9 @@ use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
+    private const ADMIN_BRIDGE_LOGIN_CACHE_PREFIX = 'admin_bridge_login:';
+    private const ADMIN_BRIDGE_LOGIN_TTL_MINUTES = 5;
+
     private function formatRegisteredName(array $validated): string
     {
         $firstName = isset($validated['first_name']) ? trim($validated['first_name']) : '';
@@ -94,18 +97,9 @@ class AuthController extends Controller
 
         $user = User::where('email', $request->email)->first();
 
-        // User not found
-        if (! $user) {
+        if (! $user || ! Hash::check($request->password, $user->password)) {
             return response()->json([
-                'message' => 'Account not found. Please register first.',
-                'user_not_found' => true,
-            ], 404);
-        }
-
-        // Wrong password
-        if (! Hash::check($request->password, $user->password)) {
-            return response()->json([
-                'message' => 'Incorrect password. Please try again.',
+                'message' => 'Invalid credentials.',
             ], 401);
         }
 
@@ -119,10 +113,34 @@ class AuthController extends Controller
 
         $token = $user->createToken('mobile')->plainTextToken;
 
+        if ($user->isAdmin()) {
+            $bridgeToken = Str::random(64);
+            Cache::put(
+                $this->adminBridgeLoginCacheKey($bridgeToken),
+                (int) $user->id,
+                now()->addMinutes(self::ADMIN_BRIDGE_LOGIN_TTL_MINUTES)
+            );
+
+            return response()->json([
+                'role'         => 'admin',
+                'redirect_url' => route('admin.bridge-login', ['token' => $bridgeToken]),
+                'token'        => $token,
+            ]);
+        }
+
+        $userData = $user->toArray();
+        $userData['role'] = 'user';
+
         return response()->json([
-            'user'  => $user,
+            'role'  => 'user',
             'token' => $token,
+            'user'  => $userData,
         ]);
+    }
+
+    private function adminBridgeLoginCacheKey(string $token): string
+    {
+        return self::ADMIN_BRIDGE_LOGIN_CACHE_PREFIX.$token;
     }
 
     public function logout(Request $request)

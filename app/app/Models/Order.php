@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Cache;
 use App\Services\BookingSummaryService;
 use Illuminate\Support\Carbon;
 use App\Models\Service;
+use App\Models\AddOnService;
+use App\Models\Barangay;
 
 class Order extends Model
 {
@@ -18,8 +20,15 @@ class Order extends Model
         'service_id',
         'weight_kg',
         'total_price',
+        'add_on_total',
+        'pickup_fee',
+        'delivery_fee',
+        'fee_zone',
         'status',
         'pickup_address',
+        'pickup_barangay_id',
+        'pickup_city',
+        'pickup_barangay',
         'pickup_date',
         'pickup_time',
         'delivery_date',
@@ -34,6 +43,9 @@ class Order extends Model
         return [
             'weight_kg'   => 'decimal:2',
             'total_price' => 'decimal:2',
+            'add_on_total' => 'decimal:2',
+            'pickup_fee' => 'decimal:2',
+            'delivery_fee' => 'decimal:2',
         ];
     }
 
@@ -72,6 +84,18 @@ class Order extends Model
     public function service()
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function pickupBarangay()
+    {
+        return $this->belongsTo(Barangay::class, 'pickup_barangay_id');
+    }
+
+    public function addOnServices()
+    {
+        return $this->belongsToMany(AddOnService::class, 'order_add_on_services')
+            ->withPivot('fee')
+            ->withTimestamps();
     }
 }
 

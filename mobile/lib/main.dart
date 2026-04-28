@@ -1,9 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
-import 'screens/admin_shell.dart';
 import 'screens/edit_profile_screen.dart';
 import 'services/auth_service.dart';
 import 'models/profile_model.dart';
@@ -33,9 +31,7 @@ class LaundryHubApp extends StatelessWidget {
       title: 'LaundryHub',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF1565C0),
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
         useMaterial3: true,
       ),
       home: const _SplashGate(),
@@ -68,18 +64,26 @@ class _SplashGateState extends State<_SplashGate> {
   }
 
   Future<void> _checkAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = await AuthService.getToken();
     if (!mounted) return;
+
     if (token != null && token.isNotEmpty) {
       final role = await AuthService.getRole();
       if (!mounted) return;
+
+      if (role == 'admin') {
+        await AuthService.logout();
+        if (!mounted) return;
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const LoginScreen()),
+        );
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              role == 'admin' ? const AdminShell() : const MainShell(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else {
       Navigator.pushReplacement(

@@ -3,6 +3,8 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\ServiceController;
+use App\Http\Controllers\Api\AddOnServiceController;
+use App\Http\Controllers\Api\BarangayController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\BatchController;
@@ -21,6 +23,8 @@ Route::post('/reset-password', [AuthController::class, 'resetPassword'])->middle
 Route::middleware('throttle:api-public')->group(function () {
     Route::get('/services', [ServiceController::class, 'index']);
     Route::get('/services/{service}', [ServiceController::class, 'show']);
+    Route::get('/add-on-services', [AddOnServiceController::class, 'index']);
+    Route::get('/barangays', [BarangayController::class, 'index']);
 
     // Public profile route
     Route::get('/profile/{userId}', [CustomerProfileController::class, 'publicProfile']);
@@ -48,7 +52,7 @@ Route::middleware(['auth:sanctum', 'throttle:api-auth'])->group(function () {
     Route::patch('/orders/{order}/cancel', [OrderController::class, 'cancel']);
 });
 
-Route::middleware(['auth:sanctum', 'throttle:api-admin'])->prefix('admin')->group(function () {
+Route::middleware(['auth:sanctum', 'admin', 'throttle:api-admin'])->prefix('admin')->group(function () {
     // Admin-only routes
     Route::get('/stats', [AdminController::class, 'stats']);
     Route::get('/orders/recent', [AdminController::class, 'recentOrders']);
@@ -63,6 +67,12 @@ Route::middleware(['auth:sanctum', 'throttle:api-admin'])->prefix('admin')->grou
     Route::post('/services', [ServiceController::class, 'store']);
     Route::put('/services/{service}', [ServiceController::class, 'update']);
     Route::delete('/services/{service}', [ServiceController::class, 'destroy']);
+
+    // Admin add-on service management routes
+    Route::get('/add-on-services', [AddOnServiceController::class, 'adminIndex']);
+    Route::post('/add-on-services', [AddOnServiceController::class, 'store']);
+    Route::put('/add-on-services/{addOnService}', [AddOnServiceController::class, 'update']);
+    Route::delete('/add-on-services/{addOnService}', [AddOnServiceController::class, 'destroy']);
 
     // Admin customer profile routes
     Route::get('/customers', [AdminController::class, 'getCustomers']);

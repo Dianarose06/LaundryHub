@@ -13,7 +13,7 @@ class ServiceFactory extends Factory
     {
         return [
             'name'        => $this->faker->randomElement([
-                'Wash & Fold', 'Dry Cleaning', 'Iron Only', 'Wash & Iron', 'Express Laundry'
+                'Wash & Fold', 'Basic Dry Cleaning', 'Iron Only', 'Wash & Iron', 'Express Laundry'
             ]),
             'description' => $this->faker->sentence(),
             'price_per_kg'=> $this->faker->randomFloat(2, 20, 100),

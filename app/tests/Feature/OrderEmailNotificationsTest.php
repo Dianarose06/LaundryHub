@@ -97,7 +97,7 @@ class OrderEmailNotificationsTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'customer']);
-        $service = Service::factory()->create(['name' => 'Dry Cleaning']);
+        $service = Service::factory()->create(['name' => 'Basic Dry Cleaning']);
 
         $order = Order::factory()->create([
             'user_id' => $customer->id,
@@ -123,7 +123,7 @@ class OrderEmailNotificationsTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin', 'notifications_enabled' => true]);
         $customer = User::factory()->create(['role' => 'customer', 'notifications_enabled' => false]);
-        $service = Service::factory()->create(['name' => 'Dry Cleaning']);
+        $service = Service::factory()->create(['name' => 'Basic Dry Cleaning']);
 
         $order = Order::factory()->create([
             'user_id' => $customer->id,
@@ -255,7 +255,7 @@ class OrderEmailNotificationsTest extends TestCase
         Notification::fake();
 
         $customer = User::factory()->create(['role' => 'customer', 'notifications_enabled' => true]);
-        $service = Service::factory()->create(['name' => 'Dry Cleaning']);
+        $service = Service::factory()->create(['name' => 'Basic Dry Cleaning']);
 
         $order = Order::factory()->create([
             'user_id' => $customer->id,

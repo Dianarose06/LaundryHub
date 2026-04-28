@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
@@ -7,6 +8,7 @@ class AuthService {
   static String get _baseUrl => ApiConfig.apiPath;
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
 
   static Future<Map<String, dynamic>> login({
     required String email,
@@ -25,16 +27,21 @@ class AuthService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
-        await _saveSession(data['token'] as String, data['user']);
-        return {'success': true, 'data': data};
-      }
+        final role = data['role']?.toString().toLowerCase() ?? 'user';
 
-      if (response.statusCode == 404) {
+        if (role == 'admin') {
+          return {'success': true, 'data': data};
+        }
+
+        final user = Map<String, dynamic>.from(
+          data['user'] as Map<String, dynamic>? ?? const {},
+        );
+        user['role'] = 'user';
+
+        await _saveSession(data['token'] as String, user);
         return {
-          'success': false,
-          'user_not_found': true,
-          'message':
-              data['message'] ?? 'Account not found. Please register first.',
+          'success': true,
+          'data': {...data, 'role': 'user', 'user': user},
         };
       }
 
@@ -43,6 +50,13 @@ class AuthService {
           'success': false,
           'email_not_verified': true,
           'message': data['message'] ?? 'Please verify your email first.',
+        };
+      }
+
+      if (response.statusCode == 401) {
+        return {
+          'success': false,
+          'message': data['message'] ?? 'Invalid credentials.',
         };
       }
 
@@ -117,13 +131,19 @@ class AuthService {
 
   static Future<void> _saveSession(String token, dynamic user) async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(_tokenKey, token);
+    await _secureStorage.write(key: _tokenKey, value: token);
     await prefs.setString(_userKey, jsonEncode(user));
   }
 
+  static Future<void> bootstrapSession({
+    required String token,
+    required String role,
+  }) async {
+    await _saveSession(token, {'role': role});
+  }
+
   static Future<String?> getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString(_tokenKey);
+    return _secureStorage.read(key: _tokenKey);
   }
 
   static Future<Map<String, dynamic>?> getUser() async {
@@ -140,12 +160,12 @@ class AuthService {
 
   static Future<String> getRole() async {
     final user = await getUser();
-    return user?['role']?.toString() ?? 'customer';
+    return user?['role']?.toString() ?? 'user';
   }
 
   static Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.remove(_tokenKey);
+    await _secureStorage.delete(key: _tokenKey);
     await prefs.remove(_userKey);
   }
 
