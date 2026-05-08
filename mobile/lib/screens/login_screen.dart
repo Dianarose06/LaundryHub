@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import '../config/api_config.dart';
 import '../services/auth_service.dart';
+import '../theme/laundryhub_theme.dart';
 import 'register_screen.dart';
 import 'main_shell.dart';
-import 'admin_shell.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,6 +28,41 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _showAdminWebDialog() async {
+    if (!mounted) return;
+
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text('Admin access'),
+        content: Text(
+          'Admin dashboard is available on the web panel.\n\n${ApiConfig.adminWebUrl}',
+          style: const TextStyle(fontSize: 14),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () async {
+              await Clipboard.setData(
+                const ClipboardData(text: ApiConfig.adminWebUrl),
+              );
+              if (!mounted) return;
+              Navigator.pop(ctx);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Admin panel link copied.')),
+              );
+            },
+            child: const Text('Copy link'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -39,14 +76,16 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
-      final role = await AuthService.getRole();
+      final role = (result['role'] as String?)?.toLowerCase() ?? 'customer';
       if (!mounted) return;
+      if (role == 'admin') {
+        await AuthService.logout();
+        await _showAdminWebDialog();
+        return;
+      }
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              role == 'admin' ? const AdminShell() : const MainShell(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else if (result['email_not_verified'] == true) {
       // Show message to verify email during registration
@@ -96,7 +135,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: LaundryHubColors.pageBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -108,7 +147,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+                    colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
                   ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(40),
@@ -164,7 +203,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       style: TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.bold,
-                        color: Color(0xFF0D1B4B),
+                        color: LaundryHubColors.textPrimaryDeep,
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -241,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               child: const Text(
                                 'Forgot Password?',
                                 style: TextStyle(
-                                  color: Color(0xFF1565C0),
+                                  color: LaundryHubColors.primary,
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
@@ -256,7 +295,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             child: ElevatedButton(
                               onPressed: _isLoading ? null : _login,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF1565C0),
+                                backgroundColor: LaundryHubColors.primary,
                                 foregroundColor: Colors.white,
                                 disabledBackgroundColor: const Color(
                                   0xFF90CAF9,
@@ -304,7 +343,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                 child: const Text(
                                   'Register',
                                   style: TextStyle(
-                                    color: Color(0xFF1565C0),
+                                    color: LaundryHubColors.primary,
                                     fontWeight: FontWeight.bold,
                                   ),
                                 ),
@@ -327,7 +366,7 @@ class _LoginScreenState extends State<LoginScreen> {
   InputDecoration _inputDecoration(String label, IconData icon) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, color: const Color(0xFF1565C0)),
+      prefixIcon: Icon(icon, color: LaundryHubColors.primary),
       filled: true,
       fillColor: Colors.white,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
@@ -341,7 +380,7 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF1565C0), width: 2),
+        borderSide: const BorderSide(color: LaundryHubColors.primary, width: 2),
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -354,3 +393,4 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 }
+

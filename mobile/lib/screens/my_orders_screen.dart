@@ -1,23 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/order_service.dart';
 import '../services/service_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 // ignore_for_file: constant_identifier_names
 class _M {
-  static const primary     = Color(0xFF2563EB);
-  static const primaryPale = Color(0xFFEFF6FF);
-  static const navy        = Color(0xFF0F172A);
-  static const slate       = Color(0xFF334155);
-  static const muted       = Color(0xFF94A3B8);
-  static const border      = Color(0xFFE2E8F0);
-  static const surface     = Color(0xFFF8FAFC);
-  static const green       = Color(0xFF10B981);
-  static const greenLight  = Color(0xFFECFDF5);
-  static const amber       = Color(0xFFF59E0B);
-  static const amberLight  = Color(0xFFFFFBEB);
-  static const red         = Color(0xFFEF4444);
-  static const redLight    = Color(0xFFFEF2F2);
+  static const primary     = LaundryHubColors.primaryVivid;
+  static const primaryPale = LaundryHubColors.primaryPale;
+  static const navy        = LaundryHubColors.textPrimary;
+  static const slate       = LaundryHubColors.textSecondary;
+  static const muted       = LaundryHubColors.textSubtle;
+  static const border      = LaundryHubColors.borderSoft;
+  static const surface     = LaundryHubColors.surfaceSoft;
+  static const green       = LaundryHubColors.success;
+  static const greenLight  = LaundryHubColors.successSoft;
+  static const amber       = LaundryHubColors.warning;
+  static const amberLight  = LaundryHubColors.warningSoft;
+  static const red         = LaundryHubColors.errorStrong;
+  static const redLight    = LaundryHubColors.errorSoft;
 }
 
 class MyOrdersScreen extends StatefulWidget {
@@ -202,7 +203,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
         if (status.toLowerCase() == 'completed')
           const Padding(
             padding: EdgeInsets.only(right: 4),
-            child: Text('✓', style: TextStyle(
+            child: Text('?', style: TextStyle(
               fontSize: 11, fontWeight: FontWeight.w600, color: _M.green)),
           ),
         Text(
@@ -435,7 +436,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _M.border, width: 1.5),
           boxShadow: [BoxShadow(
-            color: const Color(0xFF0F172A).withOpacity(0.05),
+            color: LaundryHubColors.textPrimary.withOpacity(0.05),
             blurRadius: 12, offset: const Offset(0, 3))],
         ),
         child: Padding(
@@ -634,13 +635,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0).withOpacity(0.1),
+                      color: LaundryHubColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       ServiceService.getServiceIcon(order['service_type'] ?? ''),
                       size: 28,
-                      color: const Color(0xFF1565C0),
+                      color: LaundryHubColors.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -653,7 +654,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D1B4B),
+                            color: LaundryHubColors.textPrimaryDeep,
                           ),
                         ),
                         Text(
@@ -744,7 +745,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF1565C0)),
+        Icon(icon, size: 20, color: LaundryHubColors.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -763,7 +764,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: valueColor ?? const Color(0xFF0D1B4B),
+                  color: valueColor ?? LaundryHubColors.textPrimaryDeep,
                 ),
               ),
             ],
@@ -773,3 +774,5 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 }
+
+

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/admin_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminServicesScreen extends StatefulWidget {
   const AdminServicesScreen({super.key});
@@ -10,11 +11,11 @@ class AdminServicesScreen extends StatefulWidget {
 }
 
 class _AdminServicesScreenState extends State<AdminServicesScreen> {
-  static const _navy    = Color(0xFF0F172A);
-  static const _primary = Color(0xFF2563EB);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _muted   = Color(0xFF64748B);
-  static const _border  = Color(0xFFE2E8F0);
+  static const _navy    = LaundryHubColors.textPrimary;
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _muted   = LaundryHubColors.textMuted;
+  static const _border  = LaundryHubColors.borderSoft;
 
   bool _loadingServices  = true;
   bool _loadingCustomers = true;
@@ -156,7 +157,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(ctx, false),
-              child: const Text('Cancel', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+              child: const Text('Cancel', style: TextStyle(color: LaundryHubColors.textTertiary, fontWeight: FontWeight.w600)),
             ),
             ElevatedButton(
               onPressed: () => Navigator.pop(ctx, true),
@@ -225,18 +226,18 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
         title: Text('Delete Service', style: GoogleFonts.outfit(fontWeight: FontWeight.w700)),
         content: Text(
           'Are you sure you want to delete "${service.name}"? This cannot be undone.',
-          style: GoogleFonts.dmSans(fontSize: 14, color: const Color(0xFF475569)),
+          style: GoogleFonts.dmSans(fontSize: 14, color: LaundryHubColors.textTertiary),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
             child: const Text('Cancel',
-                style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+                style: TextStyle(color: LaundryHubColors.textTertiary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFFEF4444),
+              backgroundColor: LaundryHubColors.errorStrong,
               foregroundColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -313,7 +314,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF475569), fontWeight: FontWeight.w600)),
+            child: const Text('Cancel', style: TextStyle(color: LaundryHubColors.textTertiary, fontWeight: FontWeight.w600)),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(ctx, true),
@@ -461,15 +462,15 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
                 padding:
                     const EdgeInsets.symmetric(horizontal: 12, vertical: 5),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: LaundryHubColors.primaryPale,
                   borderRadius: BorderRadius.circular(20),
-                  border: Border.all(color: const Color(0xFFBFDBFE)),
+                  border: Border.all(color: LaundryHubColors.primarySoftBorder),
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     const Icon(Icons.add_rounded, size: 14,
-                        color: Color(0xFF2563EB)),
+                        color: LaundryHubColors.primaryVivid),
                     const SizedBox(width: 4),
                     Text(
                       'Add',
@@ -494,7 +495,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
             border: Border.all(color: _border),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -553,20 +554,20 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
                         GestureDetector(
                           onTap: () => _showEditServiceDialog(svc),
                           child: const Icon(Icons.edit_outlined,
-                              size: 18, color: Color(0xFF94A3B8)),
+                              size: 18, color: LaundryHubColors.textSubtle),
                         ),
                         const SizedBox(width: 10),
                         GestureDetector(
                           onTap: () => _confirmDeleteService(svc),
                           child: const Icon(Icons.delete_outline_rounded,
-                              size: 18, color: Color(0xFFEF4444)),
+                              size: 18, color: LaundryHubColors.errorStrong),
                         ),
                       ],
                     ),
                   ),
                   if (!isLast)
                     const Divider(height: 1, indent: 16, endIndent: 16,
-                        color: Color(0xFFE2E8F0)),
+                        color: LaundryHubColors.borderSoft),
                 ],
               );
             }).toList(),
@@ -598,7 +599,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
             border: Border.all(color: _border),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -637,10 +638,10 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
                           width: 38,
                           height: 38,
                           decoration: BoxDecoration(
-                            color: const Color(0xFFEFF6FF),
+                            color: LaundryHubColors.primaryPale,
                             shape: BoxShape.circle,
                             border: Border.all(
-                                color: const Color(0xFFBFDBFE)),
+                                color: LaundryHubColors.primarySoftBorder),
                           ),
                           child: Center(
                             child: Text(
@@ -682,7 +683,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
                           style: GoogleFonts.outfit(
                             fontSize: 14,
                             fontWeight: FontWeight.w700,
-                            color: const Color(0xFF059669),
+                            color: LaundryHubColors.successDark,
                           ),
                         ),
                       ],
@@ -690,7 +691,7 @@ class _AdminServicesScreenState extends State<AdminServicesScreen> {
                   ),
                   if (!isLast)
                     const Divider(height: 1, indent: 16, endIndent: 16,
-                        color: Color(0xFFE2E8F0)),
+                        color: LaundryHubColors.borderSoft),
                 ],
               );
             }).toList(),
@@ -735,3 +736,4 @@ class _TopCustomer {
     required this.spend,
   });
 }
+

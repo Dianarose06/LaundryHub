@@ -2,6 +2,7 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/admin_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminAnalyticsScreen extends StatefulWidget {
   const AdminAnalyticsScreen({super.key});
@@ -11,10 +12,10 @@ class AdminAnalyticsScreen extends StatefulWidget {
 }
 
 class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
-  static const _navy    = Color(0xFF0F172A);
-  static const _primary = Color(0xFF2563EB);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _muted   = Color(0xFF64748B);
+  static const _navy    = LaundryHubColors.textPrimary;
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _muted   = LaundryHubColors.textMuted;
 
   bool _isLoading = true;
 
@@ -26,10 +27,10 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
   String _monthLabel = '';
 
   static const _donutColors = [
-    Color(0xFF2563EB),
-    Color(0xFF3B82F6),
-    Color(0xFF93C5FD),
-    Color(0xFFBFDBFE),
+    LaundryHubColors.primaryVivid,
+    LaundryHubColors.primaryVividLight,
+    LaundryHubColors.primarySoftAccent,
+    LaundryHubColors.primarySoftBorder,
   ];
 
   @override
@@ -167,7 +168,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFFEFF6FF),
+                  color: LaundryHubColors.primaryPale,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Text(
@@ -212,7 +213,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                         margin: const EdgeInsets.symmetric(horizontal: 4),
                         decoration: BoxDecoration(
                           borderRadius: BorderRadius.circular(6),
-                          color: isActive ? _primary : const Color(0xFFDBEAFE),
+                          color: isActive ? _primary : LaundryHubColors.primarySoft,
                         ),
                         child: isActive
                             ? null
@@ -220,7 +221,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                                 Container(
                                   height: 3,
                                   decoration: const BoxDecoration(
-                                    color: Color(0xFF93C5FD),
+                                    color: LaundryHubColors.primarySoftAccent,
                                     borderRadius: BorderRadius.vertical(
                                         top: Radius.circular(6)),
                                   ),
@@ -333,7 +334,7 @@ class _AdminAnalyticsScreenState extends State<AdminAnalyticsScreen> {
                               item['name'] as String,
                               style: GoogleFonts.dmSans(
                                   fontSize: 12,
-                                  color: const Color(0xFF334155)),
+                                  color: LaundryHubColors.textSecondary),
                             ),
                           ),
                           Text(
@@ -393,10 +394,10 @@ class _Card extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: LaundryHubColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -426,10 +427,10 @@ class _MetricCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: LaundryHubColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -445,7 +446,7 @@ class _MetricCard extends StatelessWidget {
             style: GoogleFonts.outfit(
               fontSize: 22,
               fontWeight: FontWeight.w700,
-              color: const Color(0xFF0F172A),
+              color: LaundryHubColors.textPrimary,
             ),
           ),
           const SizedBox(height: 2),
@@ -453,7 +454,7 @@ class _MetricCard extends StatelessWidget {
             label,
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: const Color(0xFF64748B),
+              color: LaundryHubColors.textMuted,
             ),
           ),
         ],
@@ -529,3 +530,4 @@ class _DonutPainter extends CustomPainter {
   bool shouldRepaint(covariant _DonutPainter old) =>
       old.segments != segments || old.colors != colors;
 }
+

@@ -1,9 +1,10 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../services/admin_profile_service.dart';
 import 'admin_customer_profile_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminCustomersScreen extends StatefulWidget {
   const AdminCustomersScreen({super.key});
@@ -13,11 +14,11 @@ class AdminCustomersScreen extends StatefulWidget {
 }
 
 class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
-  static const _primary = Color(0xFF2563EB);
-  static const _navy = Color(0xFF0F172A);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _muted = Color(0xFF94A3B8);
-  static const _border = Color(0xFFE2E8F0);
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _navy = LaundryHubColors.textPrimary;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _muted = LaundryHubColors.textSubtle;
+  static const _border = LaundryHubColors.borderSoft;
 
   bool _isLoading = true;
   List<Map<String, dynamic>> _customers = [];
@@ -139,7 +140,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
           hintStyle: GoogleFonts.dmSans(color: _muted, fontSize: 13),
           prefixIcon: const Icon(
             Icons.search,
-            color: Color(0xFF94A3B8),
+            color: LaundryHubColors.textSubtle,
             size: 20,
           ),
           filled: true,
@@ -167,14 +168,14 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.people_outline, size: 56, color: Color(0xFF94A3B8)),
+          const Icon(Icons.people_outline, size: 56, color: LaundryHubColors.textSubtle),
           const SizedBox(height: 12),
           Text(
             'No customers found',
             style: GoogleFonts.outfit(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF94A3B8),
+              color: LaundryHubColors.textSubtle,
             ),
           ),
         ],
@@ -194,7 +195,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
         border: Border.all(color: _border),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -209,7 +210,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
             children: [
               CircleAvatar(
                 radius: 24,
-                backgroundColor: const Color(0xFFEFF6FF),
+                backgroundColor: LaundryHubColors.primaryPale,
                 child: Text(
                   (c['name'] as String? ?? '?')[0].toUpperCase(),
                   style: GoogleFonts.outfit(
@@ -247,7 +248,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
                         const SizedBox(width: 8),
                         _infoChip(
                           Icons.payments_outlined,
-                          'â‚±${c['total_spent'] ?? '0'}',
+                          '₱${c['total_spent'] ?? '0'}',
                         ),
                         const SizedBox(width: 8),
                         _infoChip(
@@ -278,7 +279,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
           label,
           style: GoogleFonts.dmSans(
             fontSize: 11,
-            color: const Color(0xFF64748B),
+            color: LaundryHubColors.textMuted,
           ),
         ),
       ],
@@ -295,7 +296,7 @@ class _AdminCustomersScreenState extends State<AdminCustomersScreen> {
   }
 }
 
-// â”€â”€ Status Badge â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Status Badge ──────────────────────────────────────────────────────────────
 
 class _StatusBadge extends StatelessWidget {
   const _StatusBadge({required this.isActive});
@@ -306,7 +307,7 @@ class _StatusBadge extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: isActive ? const Color(0xFFD1FAE5) : const Color(0xFFFEE2E2),
+        color: isActive ? LaundryHubColors.successPale : LaundryHubColors.errorPale,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(
@@ -314,10 +315,11 @@ class _StatusBadge extends StatelessWidget {
         style: GoogleFonts.dmSans(
           fontSize: 11,
           fontWeight: FontWeight.w600,
-          color: isActive ? const Color(0xFF059669) : const Color(0xFFDC2626),
+          color: isActive ? LaundryHubColors.successDark : LaundryHubColors.error,
         ),
       ),
     );
   }
 }
+
 

@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/profile_service.dart';
 import '../services/image_upload_service.dart';
 import '../models/profile_model.dart';
+import '../theme/laundryhub_theme.dart';
 import 'login_screen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -86,7 +87,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(
-              foregroundColor: const Color(0xFF1565C0),
+              foregroundColor: LaundryHubColors.primary,
             ),
             child: const Text(
               'Logout',
@@ -276,7 +277,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ElevatedButton(
                   onPressed: isSubmitting ? null : submit,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
+                    backgroundColor: LaundryHubColors.primary,
                   ),
                   child: isSubmitting
                       ? const SizedBox(
@@ -446,7 +447,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     'Send a verification code to:\n$email',
                     style: const TextStyle(
                       fontSize: 13,
-                      color: Color(0xFF64748B),
+                      color: LaundryHubColors.textMuted,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -496,7 +497,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ? null
                       : verifyCode,
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF1565C0),
+                    backgroundColor: LaundryHubColors.primary,
                   ),
                   child: isVerifyingCode
                       ? const SizedBox(
@@ -557,7 +558,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _uploadProfilePicture();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF1565C0),
+              backgroundColor: LaundryHubColors.primary,
             ),
             child: const Text(
               'Change',
@@ -822,7 +823,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         style: const TextStyle(
           fontSize: 40,
           fontWeight: FontWeight.bold,
-          color: Color(0xFF1565C0),
+          color: LaundryHubColors.primary,
         ),
       ),
     );
@@ -838,11 +839,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: LaundryHubColors.pageBackground,
       body: SafeArea(
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: Color(0xFF1565C0)),
+                child: CircularProgressIndicator(color: LaundryHubColors.primary),
               )
             : SingleChildScrollView(
                 child: Column(
@@ -854,7 +855,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         gradient: LinearGradient(
                           begin: Alignment.topLeft,
                           end: Alignment.bottomRight,
-                          colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+                          colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
                         ),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(40),
@@ -911,7 +912,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                           height: 26,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2.5,
-                                            color: Color(0xFF1565C0),
+                                            color: LaundryHubColors.primary,
                                           ),
                                         ),
                                       )
@@ -977,14 +978,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                         color: Colors.white,
                                         shape: BoxShape.circle,
                                         border: Border.all(
-                                          color: const Color(0xFF1565C0),
+                                          color: LaundryHubColors.primary,
                                           width: 1.5,
                                         ),
                                       ),
                                       child: const Icon(
                                         Icons.camera_alt_outlined,
                                         size: 18,
-                                        color: Color(0xFF1565C0),
+                                        color: LaundryHubColors.primary,
                                       ),
                                     ),
                                   ),
@@ -1041,7 +1042,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.w600,
-                                      color: Color(0xFF0D1B4B),
+                                      color: LaundryHubColors.textPrimaryDeep,
                                     ),
                                   ),
                                   Text(
@@ -1049,7 +1050,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style: const TextStyle(
                                       fontSize: 16,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF1565C0),
+                                      color: LaundryHubColors.primary,
                                     ),
                                   ),
                                 ],
@@ -1093,7 +1094,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D1B4B),
+                              color: LaundryHubColors.textPrimaryDeep,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1131,7 +1132,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.stars_outlined,
                             label: 'Loyalty Points',
                             value: '${_profile?.loyaltyPoints ?? 0} pts',
-                            valueColor: const Color(0xFF1565C0),
+                            valueColor: LaundryHubColors.primary,
                           ),
                           const SizedBox(height: 12),
                           _buildInfoCard(
@@ -1199,7 +1200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
-                              color: Color(0xFF0D1B4B),
+                              color: LaundryHubColors.textPrimaryDeep,
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -1207,7 +1208,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.edit_outlined,
                             title: 'Edit Profile',
                             subtitle: 'Update your personal information',
-                            color: const Color(0xFF1565C0),
+                            color: LaundryHubColors.primary,
                             onTap: _showEditProfile,
                           ),
                           const SizedBox(height: 12),
@@ -1215,7 +1216,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.lock_outline,
                             title: 'Change Password',
                             subtitle: 'Update your account password',
-                            color: const Color(0xFF1E88E5),
+                            color: LaundryHubColors.primaryLight,
                             onTap: _showChangePasswordDialog,
                           ),
                           if (_user?['email_verified_at'] == null) ...[
@@ -1224,7 +1225,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               icon: Icons.mark_email_unread_outlined,
                               title: 'Verify Email',
                               subtitle: 'Send code and verify your email now',
-                              color: const Color(0xFFFB8C00),
+                              color: LaundryHubColors.warningOrange,
                               onTap: _showEmailVerificationDialog,
                             ),
                           ],
@@ -1283,10 +1284,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+              color: LaundryHubColors.primary.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, color: const Color(0xFF1565C0), size: 20),
+            child: Icon(icon, color: LaundryHubColors.primary, size: 20),
           ),
           const SizedBox(width: 16),
           Expanded(
@@ -1303,7 +1304,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: valueColor ?? const Color(0xFF0D1B4B),
+                    color: valueColor ?? LaundryHubColors.textPrimaryDeep,
                   ),
                 ),
               ],
@@ -1357,7 +1358,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     style: const TextStyle(
                       fontSize: 15,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0D1B4B),
+                      color: LaundryHubColors.textPrimaryDeep,
                     ),
                   ),
                   const SizedBox(height: 2),
@@ -1400,12 +1401,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF42A5F5).withValues(alpha: 0.1),
+              color: LaundryHubColors.accentSky.withValues(alpha: 0.1),
               shape: BoxShape.circle,
             ),
             child: const Icon(
               Icons.notifications_outlined,
-              color: Color(0xFF42A5F5),
+              color: LaundryHubColors.accentSky,
               size: 20,
             ),
           ),
@@ -1419,7 +1420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: Color(0xFF0D1B4B),
+                    color: LaundryHubColors.textPrimaryDeep,
                   ),
                 ),
                 const SizedBox(height: 2),
@@ -1434,7 +1435,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
           Switch(
             value: enabled,
-            activeColor: const Color(0xFF1565C0),
+            activeColor: LaundryHubColors.primary,
             onChanged: _toggleNotificationsQuick,
           ),
         ],
@@ -1442,3 +1443,5 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
+
+

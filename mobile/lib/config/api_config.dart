@@ -12,6 +12,7 @@ class ApiConfig {
   // For production: 'https://yourdomain.com'
   static const String baseUrl = 'http://localhost:8000';
   static const String apiPath = '$baseUrl/api';
+  static const String adminWebUrl = '$baseUrl/admin';
 
   /// Update this method to switch between environments dynamically
   static void updateBaseUrl(String url) {

@@ -25,8 +25,16 @@ class AuthService {
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
       if (response.statusCode == 200) {
-        await _saveSession(data['token'] as String, data['user']);
-        return {'success': true, 'data': data};
+        final user = Map<String, dynamic>.from(
+          data['user'] as Map<String, dynamic>? ?? const {},
+        );
+        final role = user['role']?.toString().toLowerCase() ?? 'customer';
+
+        if (role != 'admin') {
+          await _saveSession(data['token'] as String, user);
+        }
+
+        return {'success': true, 'data': data, 'role': role};
       }
 
       if (response.statusCode == 404) {

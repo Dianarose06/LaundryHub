@@ -5,6 +5,7 @@ import '../services/auth_service.dart';
 import '../services/admin_service.dart';
 import '../services/service_service.dart';
 import 'login_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminDashboardScreen extends StatefulWidget {
   final VoidCallback? onViewAllBookings;
@@ -15,11 +16,11 @@ class AdminDashboardScreen extends StatefulWidget {
 }
 
 class _AdminDashboardScreenState extends State<AdminDashboardScreen> with WidgetsBindingObserver {
-  static const _navy      = Color(0xFF0F172A);
-  static const _primary   = Color(0xFF2563EB);
-  static const _surface   = Color(0xFFF8FAFC);
-  static const _muted     = Color(0xFF475569);
-  static const _border    = Color(0xFFE2E8F0);
+  static const _navy      = LaundryHubColors.textPrimary;
+  static const _primary   = LaundryHubColors.primaryVivid;
+  static const _surface   = LaundryHubColors.surfaceSoft;
+  static const _muted     = LaundryHubColors.textTertiary;
+  static const _border    = LaundryHubColors.borderSoft;
 
 
   bool _isStatsLoading = true;
@@ -287,7 +288,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Widget
     return Container(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF3B82F6)],
+          colors: [LaundryHubColors.primaryDeep, LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -493,7 +494,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Widget
             border: Border.all(color: _border),
             boxShadow: [
               BoxShadow(
-                color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -506,7 +507,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Widget
                 padding: const EdgeInsets.symmetric(
                     horizontal: 16, vertical: 10),
                 decoration: const BoxDecoration(
-                  color: Color(0xFFF1F5F9),
+                  color: LaundryHubColors.surfaceMuted,
                   borderRadius:
                       BorderRadius.vertical(top: Radius.circular(16)),
                 ),
@@ -532,7 +533,7 @@ class _AdminDashboardScreenState extends State<AdminDashboardScreen> with Widget
                   padding: EdgeInsets.all(20),
                   child: Center(
                     child: Text('No bookings yet',
-                        style: TextStyle(color: Color(0xFF475569), fontSize: 13)),
+                        style: TextStyle(color: LaundryHubColors.textTertiary, fontSize: 13)),
                   ),
                 ),
               ] else ...<Widget>[
@@ -622,8 +623,8 @@ class _KpiCard extends StatelessWidget {
   final _KpiData data;
   const _KpiCard({required this.data});
 
-  static const _green = Color(0xFF34D399);
-  static const _gray  = Color(0xFF475569);
+  static const _green = LaundryHubColors.successLight;
+  static const _gray  = LaundryHubColors.textTertiary;
 
   @override
   Widget build(BuildContext context) {
@@ -632,10 +633,10 @@ class _KpiCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFFE2E8F0)),
+        border: Border.all(color: LaundryHubColors.borderSoft),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -656,7 +657,7 @@ class _KpiCard extends StatelessWidget {
                 style: GoogleFonts.outfit(
                   fontSize: 22,
                   fontWeight: FontWeight.w700,
-                  color: const Color(0xFF0F172A),
+                  color: LaundryHubColors.textPrimary,
                   height: 1.1,
                 ),
               ),
@@ -666,7 +667,7 @@ class _KpiCard extends StatelessWidget {
                 textAlign: TextAlign.center,
                 style: GoogleFonts.dmSans(
                   fontSize: 11,
-                  color: const Color(0xFF475569),
+                  color: LaundryHubColors.textTertiary,
                 ),
               ),
               const SizedBox(height: 2),
@@ -693,9 +694,9 @@ class _BookingRowWidget extends StatelessWidget {
 
   const _BookingRowWidget({required this.booking});
 
-  static const _navy = Color(0xFF0F172A);
-  static const _primary = Color(0xFF2563EB);
-  static const _muted = Color(0xFF475569);
+  static const _navy = LaundryHubColors.textPrimary;
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _muted = LaundryHubColors.textTertiary;
 
   String _formatAmount() {
     try {
@@ -749,7 +750,7 @@ class _BookingRowWidget extends StatelessWidget {
                 Icon(
                   ServiceService.getServiceIcon(booking.service),
                   size: 16,
-                  color: const Color(0xFF2563EB),
+                  color: LaundryHubColors.primaryVivid,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -810,28 +811,28 @@ class _StatusBadge extends StatelessWidget {
     final Color fg;
     switch (normalizedStatus) {
       case 'Pending':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFD97706);
+        bg = LaundryHubColors.warningPale;
+        fg = LaundryHubColors.warningDark;
         break;
       case 'Ongoing':
-        bg = const Color(0xFFEFF6FF);
-        fg = const Color(0xFF2563EB);
+        bg = LaundryHubColors.primaryPale;
+        fg = LaundryHubColors.primaryVivid;
         break;
       case 'Ready':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF059669);
+        bg = LaundryHubColors.successPale;
+        fg = LaundryHubColors.successDark;
         break;
       case 'Completed':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF059669);
+        bg = LaundryHubColors.successPale;
+        fg = LaundryHubColors.successDark;
         break;
       case 'Cancelled':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFFDC2626);
+        bg = LaundryHubColors.errorPale;
+        fg = LaundryHubColors.error;
         break;
       default:
-        bg = const Color(0xFFF1F5F9);
-        fg = const Color(0xFF475569);
+        bg = LaundryHubColors.surfaceMuted;
+        fg = LaundryHubColors.textTertiary;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -868,3 +869,5 @@ class _BookingRow {
     required this.amount,
   });
 }
+
+

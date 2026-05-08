@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/admin_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminBookingsScreen extends StatefulWidget {
   const AdminBookingsScreen({super.key});
@@ -10,11 +11,11 @@ class AdminBookingsScreen extends StatefulWidget {
 }
 
 class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
-  static const _primary  = Color(0xFF2563EB);
-  static const _navy     = Color(0xFF0F172A);
-  static const _surface  = Color(0xFFF8FAFC);
-  static const _muted    = Color(0xFF94A3B8);
-  static const _border   = Color(0xFFE2E8F0);
+  static const _primary  = LaundryHubColors.primaryVivid;
+  static const _navy     = LaundryHubColors.textPrimary;
+  static const _surface  = LaundryHubColors.surfaceSoft;
+  static const _muted    = LaundryHubColors.textSubtle;
+  static const _border   = LaundryHubColors.borderSoft;
 
   int _filterIndex = 0;
   bool _isLoading = true;
@@ -292,14 +293,14 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.inbox_rounded, size: 56, color: Color(0xFF94A3B8)),
+          const Icon(Icons.inbox_rounded, size: 56, color: LaundryHubColors.textSubtle),
           const SizedBox(height: 12),
           Text(
             'No bookings found',
             style: GoogleFonts.outfit(
               fontSize: 16,
               fontWeight: FontWeight.w600,
-              color: const Color(0xFF94A3B8),
+              color: LaundryHubColors.textSubtle,
             ),
           ),
         ],
@@ -320,12 +321,12 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
-          color: isPending ? const Color(0xFFFED7AA) : _border,
+          color: isPending ? LaundryHubColors.warningPaleStrong : _border,
           width: isPending ? 1.5 : 1,
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
             blurRadius: 12,
             offset: const Offset(0, 4),
           ),
@@ -384,13 +385,13 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             ),
             if (isOngoing) ...[
               const SizedBox(height: 12),
-              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const Divider(height: 1, color: LaundryHubColors.borderSoft),
               const SizedBox(height: 12),
               _buildStatusChips(idx),
             ],
             if (isReady) ...[
               const SizedBox(height: 12),
-              const Divider(height: 1, color: Color(0xFFE2E8F0)),
+              const Divider(height: 1, color: LaundryHubColors.borderSoft),
               const SizedBox(height: 12),
               _buildStatusChips(idx),
             ],
@@ -414,7 +415,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             text,
             style: GoogleFonts.dmSans(
               fontSize: 12,
-              color: const Color(0xFF64748B),
+              color: LaundryHubColors.textMuted,
             ),
             overflow: TextOverflow.ellipsis,
           ),
@@ -451,7 +452,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
                   decoration: BoxDecoration(
                     color: isActive
-                        ? const Color(0xFFEFF6FF)
+                        ? LaundryHubColors.primaryPale
                         : Colors.white,
                     borderRadius: BorderRadius.circular(20),
                     border: Border.all(
@@ -465,7 +466,7 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                       fontSize: 12,
                       fontWeight:
                           isActive ? FontWeight.w700 : FontWeight.w500,
-                      color: isActive ? _primary : const Color(0xFF64748B),
+                      color: isActive ? _primary : LaundryHubColors.textMuted,
                     ),
                   ),
                 ),
@@ -482,10 +483,10 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
               padding:
                   const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
               decoration: BoxDecoration(
-                color: const Color(0xFFECFDF5),
+                color: LaundryHubColors.successSoft,
                 borderRadius: BorderRadius.circular(20),
                 border: Border.all(
-                  color: const Color(0xFF10B981),
+                  color: LaundryHubColors.success,
                   width: 1.5,
                 ),
               ),
@@ -493,14 +494,14 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   const Icon(Icons.check_circle_outline,
-                    color: Color(0xFF10B981), size: 14),
+                    color: LaundryHubColors.success, size: 14),
                   const SizedBox(width: 4),
                   Text(
                     'Complete',
                     style: GoogleFonts.dmSans(
                       fontSize: 12,
                       fontWeight: FontWeight.w700,
-                      color: const Color(0xFF10B981),
+                      color: LaundryHubColors.success,
                     ),
                   ),
                 ],
@@ -525,9 +526,9 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             },
             child: const _ActionButton(
               label: 'Decline',
-              bgColor: Color(0xFFFEF2F2),
-              borderColor: Color(0xFFFECACA),
-              textColor: Color(0xFFEF4444),
+              bgColor: LaundryHubColors.errorSoft,
+              borderColor: LaundryHubColors.errorBorder,
+              textColor: LaundryHubColors.errorStrong,
             ),
           ),
         ),
@@ -540,8 +541,8 @@ class _AdminBookingsScreenState extends State<AdminBookingsScreen> {
             },
             child: const _ActionButton(
               label: 'Accept',
-              bgColor: Color(0xFF2563EB),
-              borderColor: Color(0xFF2563EB),
+              bgColor: LaundryHubColors.primaryVivid,
+              borderColor: LaundryHubColors.primaryVivid,
               textColor: Colors.white,
             ),
           ),
@@ -599,28 +600,28 @@ class _StatusBadge extends StatelessWidget {
     final Color fg;
     switch (status) {
       case 'Pending':
-        bg = const Color(0xFFFEF3C7);
-        fg = const Color(0xFFD97706);
+        bg = LaundryHubColors.warningPale;
+        fg = LaundryHubColors.warningDark;
         break;
       case 'Ongoing':
-        bg = const Color(0xFFEFF6FF);
-        fg = const Color(0xFF2563EB);
+        bg = LaundryHubColors.primaryPale;
+        fg = LaundryHubColors.primaryVivid;
         break;
       case 'Ready':
-        bg = const Color(0xFFD1FAE5);
-        fg = const Color(0xFF059669);
+        bg = LaundryHubColors.successPale;
+        fg = LaundryHubColors.successDark;
         break;
       case 'Completed':
-        bg = const Color(0xFFE0E7FF);
-        fg = const Color(0xFF4338CA);
+        bg = LaundryHubColors.infoIndigoPale;
+        fg = LaundryHubColors.infoIndigo;
         break;
       case 'Cancelled':
-        bg = const Color(0xFFFEE2E2);
-        fg = const Color(0xFFDC2626);
+        bg = LaundryHubColors.errorPale;
+        fg = LaundryHubColors.error;
         break;
       default:
-        bg = const Color(0xFFF1F5F9);
-        fg = const Color(0xFF64748B);
+        bg = LaundryHubColors.surfaceMuted;
+        fg = LaundryHubColors.textMuted;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
@@ -668,3 +669,5 @@ class _AdminBooking {
     required this.pickupAddress,
   });
 }
+
+

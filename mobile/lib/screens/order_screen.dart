@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -6,18 +6,19 @@ import '../services/order_service.dart';
 import '../services/service_service.dart';
 import '../config/api_config.dart';
 import 'booking_confirmed_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
-// â”€â”€ Design tokens (mirrors HomeScreen / _C) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ── Design tokens (mirrors HomeScreen / _C) ───────────────────────────────────
 class _K {
-  static const primary     = Color(0xFF2563EB);
-  static const primaryPale = Color(0xFFEFF6FF);
-  static const navy        = Color(0xFF0F172A);
-  static const slate       = Color(0xFF334155);
-  static const muted       = Color(0xFF94A3B8);
-  static const border      = Color(0xFFE2E8F0);
-  static const surface     = Color(0xFFF8FAFC);
-  static const amber       = Color(0xFFF59E0B);
-  static const amberLight  = Color(0xFFFFFBEB);
+  static const primary     = LaundryHubColors.primaryVivid;
+  static const primaryPale = LaundryHubColors.primaryPale;
+  static const navy        = LaundryHubColors.textPrimary;
+  static const slate       = LaundryHubColors.textSecondary;
+  static const muted       = LaundryHubColors.textSubtle;
+  static const border      = LaundryHubColors.borderSoft;
+  static const surface     = LaundryHubColors.surfaceSoft;
+  static const amber       = LaundryHubColors.warning;
+  static const amberLight  = LaundryHubColors.warningSoft;
 }
 
 class OrderScreen extends StatefulWidget {
@@ -29,7 +30,7 @@ class OrderScreen extends StatefulWidget {
 }
 
 class _OrderScreenState extends State<OrderScreen> {
-  // â”€â”€ UI state (new multi-step flow) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── UI state (new multi-step flow) ────────────────────────────────────────
   int _currentStep = 0;
   late final PageController _pageController;
   String _deliveryType = 'pickup';
@@ -41,7 +42,7 @@ class _OrderScreenState extends State<OrderScreen> {
   String _emojiFor(String name) =>
       ''; // Placeholder - icons are used instead
 
-  // â”€â”€ Existing business-logic state (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Existing business-logic state (unchanged) ─────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
   final _weightController = TextEditingController();
@@ -80,7 +81,7 @@ class _OrderScreenState extends State<OrderScreen> {
             final priceVal = rawPrice is num
                 ? rawPrice.toDouble()
                 : double.tryParse(rawPrice?.toString() ?? '0') ?? 0.0;
-            final priceStr = '₱${priceVal.round()}/8kg';
+            final priceStr = '?${priceVal.round()}/8kg';
             return <String, dynamic>{
               'id': (m['id'] as num).toInt(),
               'name': name,
@@ -119,7 +120,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1565C0),
+              primary: LaundryHubColors.primary,
             ),
           ),
           child: child!,
@@ -140,7 +141,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1565C0),
+              primary: LaundryHubColors.primary,
             ),
           ),
           child: child!,
@@ -163,7 +164,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1565C0),
+              primary: LaundryHubColors.primary,
             ),
           ),
           child: child!,
@@ -184,7 +185,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return Theme(
           data: Theme.of(context).copyWith(
             colorScheme: const ColorScheme.light(
-              primary: Color(0xFF1565C0),
+              primary: LaundryHubColors.primary,
             ),
           ),
           child: child!,
@@ -266,7 +267,7 @@ class _OrderScreenState extends State<OrderScreen> {
     }
   }
 
-  // â”€â”€ Step navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step navigation ───────────────────────────────────────────────────────
 
   void _goNext() {
     if (_currentStep == 0) {
@@ -317,7 +318,7 @@ class _OrderScreenState extends State<OrderScreen> {
     await _submitOrder();
   }
 
-  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -346,7 +347,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ App bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── App bar ───────────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
     const stepLabels = ['1 / 3', '2 / 3', '3 / 3'];
@@ -393,7 +394,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ Step indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step indicator ────────────────────────────────────────────────────────
 
   Widget _buildStepIndicator() {
     return Container(
@@ -417,7 +418,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ Step 1: Service selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 1: Service selection ─────────────────────────────────────────────
 
   Widget _buildStep1() {
     return SingleChildScrollView(
@@ -510,7 +511,7 @@ class _OrderScreenState extends State<OrderScreen> {
             },
           ),
           const SizedBox(height: 32),
-          _nextButton('Continue →', _goNext),
+          _nextButton('Continue ?', _goNext),
         ],
       ),
     );
@@ -522,7 +523,7 @@ class _OrderScreenState extends State<OrderScreen> {
     return Icon(icon, size: 26, color: _K.primary);
   }
 
-  // â”€â”€ Step 2: Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 2: Schedule ──────────────────────────────────────────────────────
 
   Widget _buildStep2() {
     return SingleChildScrollView(
@@ -658,7 +659,7 @@ class _OrderScreenState extends State<OrderScreen> {
             children: [
               _backButton(),
               const SizedBox(width: 12),
-              Expanded(child: _nextButton('Continue →', _goNext)),
+              Expanded(child: _nextButton('Continue ?', _goNext)),
             ],
           ),
         ],
@@ -745,7 +746,7 @@ class _OrderScreenState extends State<OrderScreen> {
     ),
   );
 
-  // â”€â”€ Step 3: Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 3: Summary ───────────────────────────────────────────────────────
 
   Widget _buildStep3() {
     if (_services.isEmpty || _selectedServiceId == null) {
@@ -780,7 +781,7 @@ class _OrderScreenState extends State<OrderScreen> {
               borderRadius: BorderRadius.circular(18),
               border: Border.all(color: _K.border, width: 1.5),
               boxShadow: [BoxShadow(
-                color: const Color(0xFF0F172A).withOpacity(0.05),
+                color: LaundryHubColors.textPrimary.withOpacity(0.05),
                 blurRadius: 12, offset: const Offset(0, 3))],
             ),
             child: Column(
@@ -814,7 +815,7 @@ class _OrderScreenState extends State<OrderScreen> {
                         fontSize: 11, fontWeight: FontWeight.w600,
                         color: _K.muted,
                         letterSpacing: 0.5)),
-                    Text('₱ ${estimatedTotal.toStringAsFixed(2)}',
+                    Text('? ${estimatedTotal.toStringAsFixed(2)}',
                       style: GoogleFonts.outfit(
                         fontSize: 20, fontWeight: FontWeight.w800,
                         color: _K.primary)),
@@ -873,7 +874,7 @@ class _OrderScreenState extends State<OrderScreen> {
 
   Widget _summaryDivider() => const Divider(height: 20, color: _K.border);
 
-  // â”€â”€ Shared buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Shared buttons ────────────────────────────────────────────────────────
 
   Widget _nextButton(String label, VoidCallback onTap) {
     return GestureDetector(
@@ -882,10 +883,10 @@ class _OrderScreenState extends State<OrderScreen> {
         height: 52,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF2563EB), Color(0xFF3B82F6)]),
+            colors: [LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight]),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.35),
+            color: LaundryHubColors.primaryVivid.withOpacity(0.35),
             blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Center(child: Text(label,
@@ -918,12 +919,12 @@ class _OrderScreenState extends State<OrderScreen> {
         height: 52,
         decoration: BoxDecoration(
           gradient: _isLoading
-              ? const LinearGradient(colors: [Color(0xFF90CAF9), Color(0xFF90CAF9)])
+              ? const LinearGradient(colors: [LaundryHubColors.primarySoftAccent, LaundryHubColors.primarySoftAccent])
               : const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF3B82F6)]),
+                  colors: [LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight]),
           borderRadius: BorderRadius.circular(14),
           boxShadow: _isLoading ? [] : [BoxShadow(
-            color: const Color(0xFF2563EB).withOpacity(0.35),
+            color: LaundryHubColors.primaryVivid.withOpacity(0.35),
             blurRadius: 16, offset: const Offset(0, 6))],
         ),
         child: Center(
@@ -941,3 +942,5 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 }
+
+

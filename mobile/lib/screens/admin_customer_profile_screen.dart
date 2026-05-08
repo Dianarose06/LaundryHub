@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:dio/dio.dart';
 import '../services/admin_profile_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminCustomerProfileScreen extends StatefulWidget {
   final Map<String, dynamic> customer;
@@ -18,11 +19,11 @@ class AdminCustomerProfileScreen extends StatefulWidget {
 
 class _AdminCustomerProfileScreenState
     extends State<AdminCustomerProfileScreen> {
-  static const _primary = Color(0xFF2563EB);
-  static const _navy = Color(0xFF0F172A);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _muted = Color(0xFF94A3B8);
-  static const _border = Color(0xFFE2E8F0);
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _navy = LaundryHubColors.textPrimary;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _muted = LaundryHubColors.textSubtle;
+  static const _border = LaundryHubColors.borderSoft;
 
   bool _isLoading = true;
   Map<String, dynamic>? _profile;
@@ -451,3 +452,4 @@ class _AdminCustomerProfileScreenState
     }
   }
 }
+

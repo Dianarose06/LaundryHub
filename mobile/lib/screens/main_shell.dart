@@ -5,6 +5,7 @@ import 'my_orders_screen.dart';
 import 'notifications_screen.dart';
 import 'order_screen.dart';
 import 'profile_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class MainShell extends StatefulWidget {
   final int initialIndex;
@@ -17,10 +18,10 @@ class MainShell extends StatefulWidget {
 class _MainShellState extends State<MainShell> {
   late int _selectedIndex;
 
-  static const _primary = Color(0xFF2563EB);
-  static const _surface = Color(0xFFF8FAFC);
-  static const _muted   = Color(0xFF94A3B8);
-  static const _border  = Color(0xFFE2E8F0);
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _muted   = LaundryHubColors.textSubtle;
+  static const _border  = LaundryHubColors.borderSoft;
 
   late final List<Widget> _pages;
 
@@ -82,7 +83,7 @@ class _MainShellState extends State<MainShell> {
         border: const Border(top: BorderSide(color: _border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -107,14 +108,14 @@ class _MainShellState extends State<MainShell> {
                           height: 52,
                           decoration: BoxDecoration(
                             gradient: const LinearGradient(
-                              colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                              colors: [LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight],
                               begin: Alignment.topLeft,
                               end: Alignment.bottomRight,
                             ),
                             borderRadius: BorderRadius.circular(18),
                             boxShadow: [
                               BoxShadow(
-                                color: const Color(0xFF2563EB).withValues(alpha: 0.40),
+                                color: LaundryHubColors.primaryVivid.withValues(alpha: 0.40),
                                 blurRadius: 16,
                                 offset: const Offset(0, 4),
                               ),
@@ -178,4 +179,5 @@ class _NavItem {
   final int pageIdx;
   const _NavItem({required this.icon, required this.label, required this.pageIdx});
 }
+
 

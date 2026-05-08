@@ -5,6 +5,7 @@ import 'admin_bookings_screen.dart';
 import 'admin_customers_screen.dart';
 import 'admin_analytics_screen.dart';
 import 'admin_services_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class AdminShell extends StatefulWidget {
   const AdminShell({super.key});
@@ -16,10 +17,10 @@ class AdminShell extends StatefulWidget {
 class _AdminShellState extends State<AdminShell> {
   int _selectedIndex = 0;
 
-  static const _primary = Color(0xFF2563EB);
-  static const _muted   = Color(0xFF94A3B8);
-  static const _border  = Color(0xFFE2E8F0);
-  static const _surface = Color(0xFFF8FAFC);
+  static const _primary = LaundryHubColors.primaryVivid;
+  static const _muted   = LaundryHubColors.textSubtle;
+  static const _border  = LaundryHubColors.borderSoft;
+  static const _surface = LaundryHubColors.surfaceSoft;
 
   late final _pages = <Widget>[
     AdminDashboardScreen(onViewAllBookings: () => setState(() => _selectedIndex = 1)),
@@ -53,7 +54,7 @@ class _AdminShellState extends State<AdminShell> {
         border: const Border(top: BorderSide(color: _border, width: 1)),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.06),
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.06),
             blurRadius: 16,
             offset: const Offset(0, -4),
           ),
@@ -102,3 +103,4 @@ class _NavItem {
   final String label;
   const _NavItem({required this.icon, required this.label});
 }
+
