@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../config/api_config.dart';
 import '../services/auth_service.dart';
 import 'register_screen.dart';
 import 'main_shell.dart';
-import 'admin_shell.dart';
 import 'forgot_password_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -26,6 +28,33 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
+  Future<void> _redirectAdminToWebByUrl(String redirectUrl) async {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Redirecting to Admin Panel...'),
+        duration: Duration(seconds: 2),
+      ),
+    );
+
+    final opened = await launchUrl(
+      Uri.parse(redirectUrl),
+      mode: LaunchMode.externalApplication,
+      webOnlyWindowName: '_self',
+    );
+
+    if (!mounted) return;
+
+    if (!opened) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Could not open admin web panel in browser.'),
+        ),
+      );
+    }
+  }
+
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -39,43 +68,36 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() => _isLoading = false);
 
     if (result['success'] == true) {
-      final role = await AuthService.getRole();
+      final data = Map<String, dynamic>.from(
+        result['data'] as Map<String, dynamic>? ?? const {},
+      );
+      final role = data['role']?.toString().toLowerCase() ?? 'user';
       if (!mounted) return;
+
+      if (role == 'admin') {
+        final redirectUrl =
+            data['redirect_url']?.toString() ?? ApiConfig.adminRedirectUrl;
+
+        await _redirectAdminToWebByUrl(redirectUrl);
+        return;
+      }
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(
-          builder: (_) =>
-              role == 'admin' ? const AdminShell() : const MainShell(),
-        ),
+        MaterialPageRoute(builder: (_) => const MainShell()),
       );
     } else if (result['email_not_verified'] == true) {
       // Show message to verify email during registration
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Please verify your email first during registration.'),
+          content: const Text(
+            'Please verify your email first during registration.',
+          ),
           backgroundColor: Colors.orange.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-          margin: const EdgeInsets.all(16),
-          duration: const Duration(seconds: 4),
-        ),
-      );
-    } else if (result['user_not_found'] == true) {
-      // User doesn't exist in database
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: const Row(
-            children: [
-              Icon(Icons.info_outline, color: Colors.white),
-              SizedBox(width: 12),
-              Expanded(
-                child: Text('Account not found. Please register first.'),
-              ),
-            ],
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
           ),
-          backgroundColor: Colors.red.shade700,
-          behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 4),
         ),
@@ -86,7 +108,9 @@ class _LoginScreenState extends State<LoginScreen> {
           content: Text(result['message'] ?? 'Login failed'),
           backgroundColor: Colors.red.shade700,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -170,7 +194,10 @@ class _LoginScreenState extends State<LoginScreen> {
                     const SizedBox(height: 4),
                     Text(
                       'Sign in to your account',
-                      style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: 28),
                     Form(
@@ -203,22 +230,24 @@ class _LoginScreenState extends State<LoginScreen> {
                           TextFormField(
                             controller: _passwordController,
                             obscureText: _obscurePassword,
-                            decoration: _inputDecoration(
-                              'Password',
-                              Icons.lock_outline,
-                            ).copyWith(
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: Colors.grey,
+                            decoration:
+                                _inputDecoration(
+                                  'Password',
+                                  Icons.lock_outline,
+                                ).copyWith(
+                                  suffixIcon: IconButton(
+                                    icon: Icon(
+                                      _obscurePassword
+                                          ? Icons.visibility_off_outlined
+                                          : Icons.visibility_outlined,
+                                      color: Colors.grey,
+                                    ),
+                                    onPressed: () => setState(
+                                      () =>
+                                          _obscurePassword = !_obscurePassword,
+                                    ),
+                                  ),
                                 ),
-                                onPressed: () => setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                ),
-                              ),
-                            ),
                             validator: (v) {
                               if (v == null || v.isEmpty) {
                                 return 'Please enter your password';

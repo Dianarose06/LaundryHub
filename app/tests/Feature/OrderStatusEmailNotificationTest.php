@@ -21,7 +21,7 @@ class OrderStatusEmailNotificationTest extends TestCase
 
         $admin = User::factory()->create(['role' => 'admin']);
         $customer = User::factory()->create(['role' => 'customer']);
-        $service = Service::factory()->create(['name' => 'Dry Cleaning']);
+        $service = Service::factory()->create(['name' => 'Basic Dry Cleaning']);
 
         $order = Order::factory()->create([
             'user_id' => $customer->id,

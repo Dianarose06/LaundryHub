@@ -1,27 +1,29 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
+import 'auth_service.dart';
 
 class OrderService {
   static String get _baseUrl => ApiConfig.apiPath;
 
   static Future<String?> _getToken() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getString('auth_token');
+    return AuthService.getToken();
   }
 
   static Future<Map<String, dynamic>> createOrder({
     required int serviceId,
     required double weightKg,
     required String pickupAddress,
+    int? pickupBarangayId,
+    String? pickupCity,
     DateTime? pickupDate,
     TimeOfDay? pickupTime,
     DateTime? deliveryDate,
     TimeOfDay? deliveryTime,
     String? notes,
     String? deliveryType,
+    List<int>? addOnIds,
   }) async {
     try {
       final token = await _getToken();
@@ -32,21 +34,52 @@ class OrderService {
         };
       }
 
-      final body = {
+      final body = <String, dynamic>{
         'service_id': serviceId,
         'weight_kg': weightKg,
         'pickup_address': pickupAddress,
-        if (pickupDate != null) 
-          'pickup_date': '${pickupDate.year}-${pickupDate.month.toString().padLeft(2, '0')}-${pickupDate.day.toString().padLeft(2, '0')}',
-        if (pickupTime != null) 
-          'pickup_time': '${pickupTime.hour.toString().padLeft(2, '0')}:${pickupTime.minute.toString().padLeft(2, '0')}',
-        if (deliveryDate != null) 
-          'delivery_date': '${deliveryDate.year}-${deliveryDate.month.toString().padLeft(2, '0')}-${deliveryDate.day.toString().padLeft(2, '0')}',
-        if (deliveryTime != null) 
-          'delivery_time': '${deliveryTime.hour.toString().padLeft(2, '0')}:${deliveryTime.minute.toString().padLeft(2, '0')}',
-        if (notes != null && notes.isNotEmpty) 'notes': notes,
-        if (deliveryType != null) 'delivery_type': deliveryType,
+        'payment_method': 'cod',
       };
+
+      if (pickupBarangayId != null) {
+        body['pickup_barangay_id'] = pickupBarangayId;
+      }
+
+      if (pickupCity != null && pickupCity.isNotEmpty) {
+        body['pickup_city'] = pickupCity;
+      }
+
+      if (pickupDate != null) {
+        body['pickup_date'] =
+            '${pickupDate.year}-${pickupDate.month.toString().padLeft(2, '0')}-${pickupDate.day.toString().padLeft(2, '0')}';
+      }
+
+      if (pickupTime != null) {
+        body['pickup_time'] =
+            '${pickupTime.hour.toString().padLeft(2, '0')}:${pickupTime.minute.toString().padLeft(2, '0')}';
+      }
+
+      if (deliveryDate != null) {
+        body['delivery_date'] =
+            '${deliveryDate.year}-${deliveryDate.month.toString().padLeft(2, '0')}-${deliveryDate.day.toString().padLeft(2, '0')}';
+      }
+
+      if (deliveryTime != null) {
+        body['delivery_time'] =
+            '${deliveryTime.hour.toString().padLeft(2, '0')}:${deliveryTime.minute.toString().padLeft(2, '0')}';
+      }
+
+      if (notes != null && notes.isNotEmpty) {
+        body['notes'] = notes;
+      }
+
+      if (deliveryType != null) {
+        body['delivery_type'] = deliveryType;
+      }
+
+      if (addOnIds != null && addOnIds.isNotEmpty) {
+        body['add_ons'] = addOnIds;
+      }
 
       final response = await http.post(
         Uri.parse('$_baseUrl/orders'),
@@ -109,6 +142,7 @@ class OrderService {
         return {
           'success': true,
           'data': data['orders'] ?? data['data'] ?? [],
+          'meta': data['meta'] ?? <String, dynamic>{},
         };
       }
 
@@ -153,6 +187,7 @@ class OrderService {
         return {
           'success': true,
           'data': data['order'] ?? data['data'],
+          'meta': data['meta'] ?? <String, dynamic>{},
         };
       }
 
