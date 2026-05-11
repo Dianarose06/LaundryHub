@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../config/api_config.dart';
 import '../services/auth_service.dart';
 import '../theme/laundryhub_theme.dart';
 import 'login_screen.dart';
@@ -293,34 +294,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.local_laundry_service_rounded,
-                              size: 40,
-                              color: Colors.white,
-                            ),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: 168,
+                            height: 168,
+                            child: _buildBrandLogo(),
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'LaundryHub',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           const Text(
                             'Create Your Account',
                             style: TextStyle(
                               color: Colors.white70,
-                              fontSize: 15,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -778,6 +764,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBrandLogo() {
+    final primaryUrl = '${ApiConfig.baseUrl}/images/admin-logo.png';
+
+    return Image.network(
+      primaryUrl,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Image.asset(
+        'assets/images/admin-logo.png',
+        fit: BoxFit.contain,
       ),
     );
   }

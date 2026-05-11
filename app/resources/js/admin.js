@@ -4,6 +4,7 @@ const state = {
   token: null,
   user: null,
   isLoginSubmitting: false,
+  isLogoutSubmitting: false,
   view: 'dashboard',
   bookings: {
     page: 1,
@@ -39,6 +40,7 @@ const viewTitles = {
 
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const apiBaseUrl = `${window.LAUNDRYHUB_API_BASE_URL || '/api'}`.replace(/\/$/, '');
 
 function setText(target, value) {
   const el = typeof target === 'string' ? qs(target) : target;
@@ -322,10 +324,29 @@ function setLoginLoading(isLoading) {
   if (password) password.disabled = isLoading;
 }
 
+function setLogoutLoading(isLoading) {
+  const confirm = qs('#logout-modal-confirm');
+  const spinner = qs('#logout-modal-confirm .btn-spinner');
+  const label = qs('#logout-modal-confirm .btn-label');
+  const cancel = qs('#logout-modal-cancel');
+
+  if (confirm) {
+    confirm.disabled = isLoading;
+    confirm.classList.toggle('is-loading', isLoading);
+    confirm.setAttribute('aria-busy', isLoading ? 'true' : 'false');
+  }
+
+  if (spinner) spinner.classList.toggle('hidden', !isLoading);
+  if (label) label.textContent = isLoading ? 'Logging out...' : 'Yes';
+  if (cancel) cancel.disabled = isLoading;
+}
+
 async function apiRequest(path, options = {}) {
   const controller = new AbortController();
-  const timeoutMs = options.timeoutMs || 15000;
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 20000;
+  const timeoutId = timeoutMs > 0
+    ? setTimeout(() => controller.abort(), timeoutMs)
+    : null;
 
   const config = {
     method: options.method || 'GET',
@@ -346,8 +367,8 @@ async function apiRequest(path, options = {}) {
   }
 
   try {
-    const response = await fetch(`/api${path}`, config);
-    clearTimeout(timeoutId);
+    const response = await fetch(`${apiBaseUrl}${path}`, config);
+    if (timeoutId) clearTimeout(timeoutId);
     let data = null;
     try {
       data = await response.json();
@@ -363,9 +384,9 @@ async function apiRequest(path, options = {}) {
 
     return { ok: response.ok, status: response.status, data };
   } catch (error) {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
     if (error?.name === 'AbortError') {
-      showToast('Request timed out. Please check server and try again.');
+      showToast('Request timed out. The server may still be starting up.');
       return { ok: false, status: 408, data: { message: 'Request timed out.' } };
     }
     showToast('Network error. Please try again.');
@@ -433,6 +454,7 @@ async function handleLogin(event) {
       method: 'POST',
       body: { email, password },
       skipAuth: true,
+      timeoutMs: 45000,
     });
     if (!res.ok) {
       setText(errorBox, res.data?.message || 'Login failed.');
@@ -468,11 +490,40 @@ async function handleLogin(event) {
 }
 
 async function handleLogout() {
-  if (state.token) {
-    await apiRequest('/logout', { method: 'POST' });
+  openLogoutModal();
+}
+
+function openLogoutModal() {
+  if (state.isLogoutSubmitting) return;
+  setLogoutLoading(false);
+  qs('#logout-modal-overlay')?.classList.add('show');
+  qs('#logout-modal')?.classList.remove('hidden');
+  qs('#logout-modal')?.classList.add('show');
+}
+
+function closeLogoutModal() {
+  if (state.isLogoutSubmitting) return;
+  setLogoutLoading(false);
+  qs('#logout-modal-overlay')?.classList.remove('show');
+  qs('#logout-modal')?.classList.remove('show');
+  qs('#logout-modal')?.classList.add('hidden');
+}
+
+async function confirmLogout() {
+  if (state.isLogoutSubmitting) return;
+  state.isLogoutSubmitting = true;
+  setLogoutLoading(true);
+
+  try {
+    if (state.token) {
+      await apiRequest('/logout', { method: 'POST' });
+    }
+  } catch (error) {
+    // Proceed with local logout even if the API request fails.
+  } finally {
+    clearSession();
+    window.location.assign('/admin');
   }
-  clearSession();
-  showLogin();
 }
 
 async function loadView(view) {
@@ -1326,6 +1377,12 @@ function bindEvents() {
 
   const logoutButton = qs('#logout-button');
   if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+  const logoutModalCancel = qs('#logout-modal-cancel');
+  if (logoutModalCancel) logoutModalCancel.addEventListener('click', closeLogoutModal);
+  const logoutModalConfirm = qs('#logout-modal-confirm');
+  if (logoutModalConfirm) logoutModalConfirm.addEventListener('click', confirmLogout);
+  const logoutModalOverlay = qs('#logout-modal-overlay');
+  if (logoutModalOverlay) logoutModalOverlay.addEventListener('click', closeLogoutModal);
 
   qsa('[data-view]').forEach((link) => {
     link.addEventListener('click', () => {

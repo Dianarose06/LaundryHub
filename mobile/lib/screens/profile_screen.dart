@@ -35,6 +35,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   Future<void> _loadProfile() async {
     setState(() => _isLoading = true);
+
+    final savedUser = await AuthService.getUser();
+    if (mounted && savedUser != null) {
+      setState(() {
+        _user = savedUser;
+      });
+    }
+
     try {
       final batch = await _profileService.getProfileBatch();
       final profile = batch['profile'] as CustomerProfile;
@@ -45,25 +53,60 @@ class _ProfileScreenState extends State<ProfileScreen> {
           _profile = profile;
           _completionStatus = completionStatus;
           _user = {
-            'name': profile.name,
-            'email': profile.email,
-            'phone': profile.phone,
-            'email_verified_at': profile.emailVerifiedAt,
+            'name': _valueOrSaved(profile.name, savedUser, 'name'),
+            'email': _valueOrSaved(profile.email, savedUser, 'email'),
+            'phone': _valueOrSaved(profile.phone, savedUser, 'phone'),
+            'email_verified_at':
+                profile.emailVerifiedAt ?? savedUser?['email_verified_at'],
           };
           _isLoading = false;
         });
       }
     } catch (e) {
+      try {
+        final profile = await _profileService.getProfile();
+        if (mounted) {
+          setState(() {
+            _profile = profile;
+            _user = {
+              'name': _valueOrSaved(profile.name, savedUser, 'name'),
+              'email': _valueOrSaved(profile.email, savedUser, 'email'),
+              'phone': _valueOrSaved(profile.phone, savedUser, 'phone'),
+              'email_verified_at':
+                  profile.emailVerifiedAt ?? savedUser?['email_verified_at'],
+            };
+            _isLoading = false;
+          });
+        }
+        return;
+      } catch (_) {
+        // Keep the saved login user visible when the profile endpoints fail.
+      }
+
       if (mounted) {
         setState(() => _isLoading = false);
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Failed to load profile: ${e.toString()}'),
-            backgroundColor: Colors.red,
-          ),
-        );
+        if (_user == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Failed to load profile: ${e.toString()}'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     }
+  }
+
+  String? _valueOrSaved(
+    String? value,
+    Map<String, dynamic>? savedUser,
+    String key,
+  ) {
+    final trimmed = value?.trim();
+    if (trimmed != null && trimmed.isNotEmpty) return trimmed;
+
+    final savedValue = savedUser?[key]?.toString().trim();
+    return savedValue != null && savedValue.isNotEmpty ? savedValue : null;
   }
 
   Future<void> _confirmLogout() async {

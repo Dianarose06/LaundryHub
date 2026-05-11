@@ -1,4 +1,3 @@
-
 const state = {
   token: null,
   user: null,
@@ -38,6 +37,7 @@ const viewTitles = {
 
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
+const apiBaseUrl = `${window.LAUNDRYHUB_API_BASE_URL || '/api'}`.replace(/\/$/, '');
 
 function setText(target, value) {
   const el = typeof target === 'string' ? qs(target) : target;
@@ -323,8 +323,10 @@ function setLoginLoading(isLoading) {
 
 async function apiRequest(path, options = {}) {
   const controller = new AbortController();
-  const timeoutMs = options.timeoutMs || 15000;
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 20000;
+  const timeoutId = timeoutMs > 0
+    ? setTimeout(() => controller.abort(), timeoutMs)
+    : null;
 
   const config = {
     method: options.method || 'GET',
@@ -345,8 +347,8 @@ async function apiRequest(path, options = {}) {
   }
 
   try {
-    const response = await fetch(`/api${path}`, config);
-    clearTimeout(timeoutId);
+    const response = await fetch(`${apiBaseUrl}${path}`, config);
+    if (timeoutId) clearTimeout(timeoutId);
     let data = null;
     try {
       data = await response.json();
@@ -362,9 +364,9 @@ async function apiRequest(path, options = {}) {
 
     return { ok: response.ok, status: response.status, data };
   } catch (error) {
-    clearTimeout(timeoutId);
+    if (timeoutId) clearTimeout(timeoutId);
     if (error?.name === 'AbortError') {
-      showToast('Request timed out. Please check server and try again.');
+      showToast('Request timed out. The server may still be starting up.');
       return { ok: false, status: 408, data: { message: 'Request timed out.' } };
     }
     showToast('Network error. Please try again.');
@@ -432,6 +434,7 @@ async function handleLogin(event) {
       method: 'POST',
       body: { email, password },
       skipAuth: true,
+      timeoutMs: 45000,
     });
     if (!res.ok) {
       setText(errorBox, res.data?.message || 'Login failed.');
@@ -467,11 +470,28 @@ async function handleLogin(event) {
 }
 
 async function handleLogout() {
+  openLogoutModal();
+}
+
+function openLogoutModal() {
+  qs('#logout-modal-overlay')?.classList.add('show');
+  qs('#logout-modal')?.classList.remove('hidden');
+  qs('#logout-modal')?.classList.add('show');
+}
+
+function closeLogoutModal() {
+  qs('#logout-modal-overlay')?.classList.remove('show');
+  qs('#logout-modal')?.classList.remove('show');
+  qs('#logout-modal')?.classList.add('hidden');
+}
+
+async function confirmLogout() {
+  closeLogoutModal();
   if (state.token) {
     await apiRequest('/logout', { method: 'POST' });
   }
   clearSession();
-  showLogin();
+  window.location.assign('/admin');
 }
 
 async function loadView(view) {
@@ -698,7 +718,7 @@ function openBookingModal(orderId) {
   const statusValue = normalizeStatus(order.status) || 'pending';
 
   if (title) title.textContent = 'Booking details';
-  if (subtitle) subtitle.textContent = `${orderDisplayId} · ${statusValue}`;
+  if (subtitle) subtitle.textContent = `${orderDisplayId} Â· ${statusValue}`;
   if (body) body.innerHTML = renderBookingDetailsContent(order);
 
   if (overlay) overlay.classList.add('show');
@@ -821,7 +841,7 @@ async function loadBookings() {
   });
 
   const totalOrders = pagination.total || orders.length;
-  setText('#bookings-footer-info', `Showing ${orders.length} of ${totalOrders} orders — Page ${pagination.current_page || 1} of ${pagination.last_page || 1}`);
+  setText('#bookings-footer-info', `Showing ${orders.length} of ${totalOrders} orders â€” Page ${pagination.current_page || 1} of ${pagination.last_page || 1}`);
   const prev = qs('#bookings-prev');
   const next = qs('#bookings-next');
   const currentPageBtn = qs('#bookings-current-page');
@@ -1086,7 +1106,7 @@ async function loadAnalytics() {
   setText('#analytics-top-customer', bestCustomer?.name || 'No customer data yet');
   setText(
     '#analytics-top-customer-meta',
-    bestCustomer ? `${bestCustomer.orders || 0} orders · ${bestCustomer.spend_label || formatCurrency(bestCustomer.spend || 0)}` : 'No customer orders yet'
+    bestCustomer ? `${bestCustomer.orders || 0} orders Â· ${bestCustomer.spend_label || formatCurrency(bestCustomer.spend || 0)}` : 'No customer orders yet'
   );
   setText('#analytics-order-health', `${completionRate}% completion`);
 
@@ -1325,6 +1345,12 @@ function bindEvents() {
 
   const logoutButton = qs('#logout-button');
   if (logoutButton) logoutButton.addEventListener('click', handleLogout);
+  const logoutModalCancel = qs('#logout-modal-cancel');
+  if (logoutModalCancel) logoutModalCancel.addEventListener('click', closeLogoutModal);
+  const logoutModalConfirm = qs('#logout-modal-confirm');
+  if (logoutModalConfirm) logoutModalConfirm.addEventListener('click', confirmLogout);
+  const logoutModalOverlay = qs('#logout-modal-overlay');
+  if (logoutModalOverlay) logoutModalOverlay.addEventListener('click', closeLogoutModal);
 
   qsa('[data-view]').forEach((link) => {
     link.addEventListener('click', () => {

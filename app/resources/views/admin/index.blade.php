@@ -24,6 +24,9 @@
       ->first();
     $canUseBuildFallback = is_string($adminCssFallback) && is_string($adminJsFallback);
   @endphp
+  <script>
+    window.LAUNDRYHUB_API_BASE_URL = @json(rtrim(url('/api'), '/'));
+  </script>
   @if ($useLegacyAdminAssets)
     <link rel="stylesheet" href="{{ asset('assets/admin/admin.css') }}">
     <script defer src="{{ asset('assets/admin/admin.js') }}"></script>
@@ -617,6 +620,27 @@
         </button>
       </div>
       <div id="booking-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="logout-modal-overlay" class="overlay"></div>
+  <div id="logout-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="logout-modal-title">
+    <div class="modal-panel" style="width:min(420px,calc(100vw - 36px));max-height:none;">
+      <div class="modal-header">
+        <div class="space-y-1">
+          <h3 id="logout-modal-title" class="heading-font text-lg font-semibold">Confirm Logout</h3>
+          <p class="text-xs text-muted">Are you sure you want to logout?</p>
+        </div>
+      </div>
+      <div class="modal-body">
+        <div class="flex items-center justify-end gap-3">
+          <button id="logout-modal-cancel" class="button-outline" type="button">Cancel</button>
+          <button id="logout-modal-confirm" class="button-primary button-with-spinner" type="button" aria-busy="false">
+            <span class="btn-label">Yes</span>
+            <span class="btn-spinner hidden" aria-hidden="true"></span>
+          </button>
+        </div>
+      </div>
     </div>
   </div>
 
