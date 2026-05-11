@@ -1,8 +1,8 @@
-﻿import './bootstrap';
 
 const state = {
   token: null,
   user: null,
+  isLoginSubmitting: false,
   view: 'dashboard',
   bookings: {
     page: 1,
@@ -81,8 +81,21 @@ function formatValue(value, fallback = '---') {
   return value;
 }
 
+function escapeHtml(value) {
+  return `${value ?? ''}`
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#039;');
+}
+
 function formatYesNo(value) {
   return value ? 'Yes' : 'No';
+}
+
+function normalizeRole(value) {
+  return `${value || ''}`.trim().toLowerCase();
 }
 
 function normalizeStatus(value) {
@@ -192,25 +205,46 @@ function clearSession() {
   state.user = null;
 }
 
+function isLoginPagePath() {
+  return window.location.pathname === '/admin';
+}
+
+function isDashboardPagePath() {
+  return window.location.pathname.startsWith('/admin/dashboard');
+}
+
 function showLogin() {
   closeBookingModal();
+  if (!isLoginPagePath()) {
+    window.location.assign('/admin');
+    return;
+  }
   show(qs('.bg-aurora'));
   show(qs('#login-view'));
   hide(qs('#app-view'));
 }
 
 function showApp() {
+  if (!isDashboardPagePath()) {
+    window.location.assign('/admin/dashboard');
+    return;
+  }
   hide(qs('.bg-aurora'));
   hide(qs('#login-view'));
   show(qs('#app-view'));
   removeDecorativeMainWatermarks();
   if (state.user) {
-    const adminName = state.user.name?.trim() || 'LaundryHub Admin';
+    const fullAdminName = state.user.name?.trim() || 'LaundryHub Admin';
+    const adminName = 'Admin';
     const adminInitial = adminName.charAt(0).toUpperCase() || 'A';
-    setText('#user-name', state.user.name || 'Admin');
+    const adminEmail = state.user.email || 'admin@laundryhub.com';
+    setText('#user-name', fullAdminName || 'Admin');
     setText('#user-email', state.user.email || '');
     setText('#header-admin-name', adminName);
     setText('#header-admin-avatar', adminInitial);
+    setText('#sidebar-admin-name', adminName);
+    setText('#sidebar-admin-email', adminEmail);
+    setText('#sidebar-admin-avatar', adminInitial);
   }
 }
 
@@ -339,6 +373,7 @@ async function apiRequest(path, options = {}) {
 }
 
 async function bootstrapApp() {
+  const onLoginPage = isLoginPagePath();
   const token = localStorage.getItem('lh_admin_token');
   const rawUser = localStorage.getItem('lh_admin_user');
 
@@ -357,14 +392,15 @@ async function bootstrapApp() {
     return;
   }
 
-  if (!user || user.role !== 'admin') {
+  if (!user || normalizeRole(user.role) !== 'admin') {
     clearSession();
     showLogin();
     return;
   }
 
-  if (window.location.pathname === '/admin') {
-    window.history.replaceState({}, '', '/admin/dashboard');
+  if (onLoginPage) {
+    window.location.assign('/admin/dashboard');
+    return;
   }
 
   state.token = token;
@@ -373,23 +409,23 @@ async function bootstrapApp() {
   setActiveView('dashboard');
 
   const meRes = await apiRequest('/user');
-  if (!meRes.ok || meRes.data?.role !== 'admin') {
-    clearSession();
-    showLogin();
-    return;
+  if (meRes.ok && normalizeRole(meRes.data?.role) === 'admin') {
+    setSession(token, meRes.data);
   }
-
-  setSession(token, meRes.data);
 }
 
 async function handleLogin(event) {
   event.preventDefault();
+  if (state.isLoginSubmitting) return;
+
   const email = qs('#login-email')?.value.trim() || '';
   const password = qs('#login-password')?.value || '';
   const errorBox = qs('#login-error');
   hide(errorBox);
 
+  state.isLoginSubmitting = true;
   setLoginLoading(true);
+  let shouldRedirect = false;
   let res;
   try {
     res = await apiRequest('/login', {
@@ -397,29 +433,37 @@ async function handleLogin(event) {
       body: { email, password },
       skipAuth: true,
     });
+    if (!res.ok) {
+      setText(errorBox, res.data?.message || 'Login failed.');
+      show(errorBox);
+      return;
+    }
+
+    const user = res.data?.user || null;
+    const token = `${res.data?.token || ''}`.trim();
+    const role = normalizeRole(user?.role);
+
+    if (!token) {
+      setText(errorBox, 'Login failed. Missing access token.');
+      show(errorBox);
+      return;
+    }
+
+    if (role !== 'admin') {
+      setText(errorBox, 'This account does not have admin access.');
+      show(errorBox);
+      return;
+    }
+
+    setSession(token, user);
+    shouldRedirect = true;
+    window.location.assign('/admin/dashboard');
   } finally {
-    setLoginLoading(false);
+    state.isLoginSubmitting = false;
+    if (!shouldRedirect) {
+      setLoginLoading(false);
+    }
   }
-
-  if (!res.ok) {
-    setText(errorBox, res.data?.message || 'Login failed.');
-    show(errorBox);
-    return;
-  }
-
-  const user = res.data?.user;
-  const token = res.data?.token;
-  const role = user?.role || 'customer';
-
-  if (role !== 'admin') {
-    setText(errorBox, 'This account does not have admin access.');
-    show(errorBox);
-    return;
-  }
-
-  setSession(token, user);
-  showApp();
-  setActiveView('dashboard');
 }
 
 async function handleLogout() {
@@ -471,7 +515,7 @@ async function loadDashboard() {
     const badgeTotal = qs('#stat-badge-total');
     if (badgeTotal) {
       badgeTotal.className = 'stat-badge green';
-      badgeTotal.textContent = '↑ All time';
+      badgeTotal.textContent = 'All time';
     }
     const badgePending = qs('#stat-badge-pending');
     if (badgePending) {
@@ -487,7 +531,7 @@ async function loadDashboard() {
     if (badgeRevenue) {
       if (revenue > 0) {
         badgeRevenue.className = 'stat-badge green';
-        badgeRevenue.textContent = '↑ Earning today';
+        badgeRevenue.textContent = 'Earning today';
       } else {
         badgeRevenue.className = 'stat-badge red';
         badgeRevenue.textContent = 'No revenue yet';
@@ -496,7 +540,7 @@ async function loadDashboard() {
     const badgeCustomers = qs('#stat-badge-customers');
     if (badgeCustomers) {
       badgeCustomers.className = 'stat-badge green';
-      badgeCustomers.textContent = '↑ Growing';
+      badgeCustomers.textContent = 'Growing';
     }
   }
 
@@ -654,7 +698,7 @@ function openBookingModal(orderId) {
   const statusValue = normalizeStatus(order.status) || 'pending';
 
   if (title) title.textContent = 'Booking details';
-  if (subtitle) subtitle.textContent = `${orderDisplayId} · ${statusValue}`;
+  if (subtitle) subtitle.textContent = `${orderDisplayId} � ${statusValue}`;
   if (body) body.innerHTML = renderBookingDetailsContent(order);
 
   if (overlay) overlay.classList.add('show');
@@ -777,7 +821,7 @@ async function loadBookings() {
   });
 
   const totalOrders = pagination.total || orders.length;
-  setText('#bookings-footer-info', `Showing ${orders.length} of ${totalOrders} orders — Page ${pagination.current_page || 1} of ${pagination.last_page || 1}`);
+  setText('#bookings-footer-info', `Showing ${orders.length} of ${totalOrders} orders � Page ${pagination.current_page || 1} of ${pagination.last_page || 1}`);
   const prev = qs('#bookings-prev');
   const next = qs('#bookings-next');
   const currentPageBtn = qs('#bookings-current-page');
@@ -1017,10 +1061,34 @@ async function loadAnalytics() {
   }
 
   const data = res.data || {};
+  const monthlyRevenue = Number(data.monthly_revenue || 0);
+  const totalOrdersThisMonth = Number(data.total_orders_this_month || 0);
+  const completedOrdersThisMonth = Number(data.completed_orders_this_month || 0);
+  const cancelledOrdersThisMonth = Number(data.cancelled_orders_this_month || 0);
+  const newCustomersThisMonth = Number(data.new_customers_this_month || 0);
+  const totalCustomers = Number(data.total_customers || 0);
+  const completionRate = Number(data.completion_rate || 0);
+  const topService = data.top_service || null;
+  const topCustomers = Array.isArray(data.top_customers) ? data.top_customers : [];
+  const bestCustomer = topCustomers[0] || null;
+
   setText('#analytics-month', data.month_label || '');
-  setText('#analytics-monthly-revenue', formatCurrency(data.monthly_revenue || 0));
-  setText('#analytics-monthly-card', formatCurrency(data.monthly_revenue || 0));
-  setText('#analytics-avg-rating', formatValue(data.avg_rating, 'N/A'));
+  setText('#analytics-monthly-revenue', formatCurrency(monthlyRevenue));
+  setText('#analytics-monthly-card', formatCurrency(monthlyRevenue));
+  setText('#analytics-completion-rate', `${completionRate}%`);
+  setText('#analytics-monthly-orders', totalOrdersThisMonth);
+  setText('#analytics-new-customers', newCustomersThisMonth);
+  setText('#analytics-total-customers', `${totalCustomers} total customers`);
+  setText('#analytics-completed-orders', completedOrdersThisMonth);
+  setText('#analytics-cancelled-orders', `${cancelledOrdersThisMonth} cancelled`);
+  setText('#analytics-top-service', topService?.name || 'No service data yet');
+  setText('#analytics-top-service-meta', topService ? `${topService.orders || 0} orders` : 'No completed order mix yet');
+  setText('#analytics-top-customer', bestCustomer?.name || 'No customer data yet');
+  setText(
+    '#analytics-top-customer-meta',
+    bestCustomer ? `${bestCustomer.orders || 0} orders � ${bestCustomer.spend_label || formatCurrency(bestCustomer.spend || 0)}` : 'No customer orders yet'
+  );
+  setText('#analytics-order-health', `${completionRate}% completion`);
 
   const weekly = data.weekly_revenue || [];
   const max = Math.max(1, ...weekly.map((value) => Number(value || 0)));
@@ -1032,36 +1100,91 @@ async function loadAnalytics() {
   weekly.forEach((value, index) => {
     const height = Math.round((Number(value || 0) / max) * 100);
     const bar = document.createElement('div');
-    bar.className = 'flex flex-col items-center gap-2';
+    bar.className = 'weekly-bar';
     bar.innerHTML = `
-      <div class="w-8 rounded-xl bg-amber-400/70" style="height:${height}%; min-height:8px;"></div>
-      <div class="text-xs text-slate-500">${dayLabels[index] || ''}</div>
+      <div class="weekly-bar-value">${formatCurrency(Number(value || 0))}</div>
+      <div class="weekly-bar-track" title="${formatCurrency(Number(value || 0))}">
+        <div class="weekly-bar-fill" style="height:${height}%;"></div>
+      </div>
+      <div class="weekly-bar-label">${dayLabels[index] || ''}</div>
     `;
     weeklyContainer.appendChild(bar);
   });
 
   const breakdown = data.service_breakdown || [];
   const breakdownBody = qs('#service-breakdown-body');
-  breakdownBody.innerHTML = '';
+  const breakdownDonut = qs('#service-breakdown-donut');
+  const breakdownTotal = qs('#service-breakdown-total');
+  if (breakdownBody) breakdownBody.innerHTML = '';
+
+  const palette = ['#3B82F6', '#34D399', '#F59E0B', '#EC4899', '#A78BFA', '#22D3EE'];
+  let accumulator = 0;
+  let pctTotal = 0;
+  const segments = [];
 
   if (!breakdown.length) {
-    breakdownBody.innerHTML = '<div class="text-sm text-slate-500">No data yet.</div>';
+    if (breakdownBody) {
+      breakdownBody.innerHTML = '<div class="analytics-empty">No service data yet.</div>';
+    }
+    if (breakdownDonut) {
+      breakdownDonut.style.background = 'conic-gradient(rgba(148, 163, 184, 0.2) 0% 100%)';
+    }
+    if (breakdownTotal) setText('#service-breakdown-total', '0%');
+  } else {
+    breakdown.forEach((item, index) => {
+      const pct = Math.max(0, Math.min(100, Number(item.pct || 0)));
+      const color = palette[index % palette.length];
+      if (pct > 0) {
+        segments.push(`${color} ${accumulator}% ${accumulator + pct}%`);
+      }
+      accumulator += pct;
+      pctTotal += pct;
+
+      if (breakdownBody) {
+        const row = document.createElement('div');
+        row.className = 'breakdown-legend-row';
+        row.innerHTML = `
+          <span class="breakdown-legend-swatch" style="background:${color};"></span>
+          <div class="breakdown-legend-copy">
+            <div class="breakdown-legend-name">${escapeHtml(item.name || 'Service')}</div>
+            <div class="breakdown-legend-meta">${pct}% &middot; ${item.count || 0} orders</div>
+          </div>
+        `;
+        breakdownBody.appendChild(row);
+      }
+    });
+
+    if (breakdownDonut) {
+      const safeTotal = Math.min(100, Math.round(pctTotal));
+      if (pctTotal < 100) {
+        segments.push(`rgba(148, 163, 184, 0.2) ${pctTotal}% 100%`);
+      }
+      breakdownDonut.style.background = `conic-gradient(${segments.join(', ')})`;
+      if (breakdownTotal) setText('#service-breakdown-total', `${safeTotal}%`);
+    }
   }
 
-  breakdown.forEach((item) => {
-    const row = document.createElement('div');
-    row.className = 'space-y-2';
-    row.innerHTML = `
-      <div class="flex items-center justify-between text-sm">
-        <span class="font-semibold">${item.name || 'Service'}</span>
-        <span class="text-slate-500">${item.pct || 0}%</span>
-      </div>
-      <div class="h-2 rounded-full bg-slate-100">
-        <div class="h-2 rounded-full bg-emerald-500" style="width:${item.pct || 0}%;"></div>
-      </div>
-    `;
-    breakdownBody.appendChild(row);
-  });
+  const topCustomersList = qs('#analytics-top-customers-list');
+  if (topCustomersList) {
+    topCustomersList.innerHTML = '';
+    if (!topCustomers.length) {
+      topCustomersList.innerHTML = '<div class="analytics-empty">No customer spend data yet.</div>';
+    } else {
+      topCustomers.forEach((customer, index) => {
+        const row = document.createElement('div');
+        row.className = 'analytics-customer-row';
+        row.innerHTML = `
+          <span class="analytics-rank">${index + 1}</span>
+          <div class="analytics-customer-copy">
+            <strong>${escapeHtml(customer.name || 'Customer')}</strong>
+            <span>${customer.orders || 0} orders</span>
+          </div>
+          <div class="analytics-customer-spend">${customer.spend_label || formatCurrency(customer.spend || 0)}</div>
+        `;
+        topCustomersList.appendChild(row);
+      });
+    }
+  }
 }
 
 async function loadServices() {
@@ -1177,6 +1300,15 @@ async function handleServiceDelete(serviceId) {
   await loadServices();
 }
 
+function setPasswordVisibility(loginPassword, togglePassword, shouldShowPassword) {
+  loginPassword.type = shouldShowPassword ? 'text' : 'password';
+  togglePassword.setAttribute('aria-pressed', shouldShowPassword ? 'true' : 'false');
+  togglePassword.setAttribute('aria-label', shouldShowPassword ? 'Hide password' : 'Show password');
+  togglePassword.innerHTML = shouldShowPassword
+    ? '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
+    : '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+}
+
 function bindEvents() {
   const loginForm = qs('#login-form');
   if (loginForm) loginForm.addEventListener('submit', handleLogin);
@@ -1184,12 +1316,10 @@ function bindEvents() {
   const togglePassword = qs('#toggle-password');
   const loginPassword = qs('#login-password');
   if (togglePassword && loginPassword) {
+    setPasswordVisibility(loginPassword, togglePassword, false);
     togglePassword.addEventListener('click', () => {
-      const isPassword = loginPassword.type === 'password';
-      loginPassword.type = isPassword ? 'text' : 'password';
-      togglePassword.innerHTML = isPassword
-        ? '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>'
-        : '<svg class="eye-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>';
+      const shouldShowPassword = loginPassword.type === 'password';
+      setPasswordVisibility(loginPassword, togglePassword, shouldShowPassword);
     });
   }
 

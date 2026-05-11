@@ -8,6 +8,8 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   @php
+    $adminPage = $adminPage ?? 'dashboard';
+    $useLegacyAdminAssets = app()->environment('local');
     $manifestPath = public_path('build/manifest.json');
     $manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : [];
     $adminCss = is_array($manifest) ? data_get($manifest, 'resources/css/admin.css.file') : null;
@@ -22,7 +24,10 @@
       ->first();
     $canUseBuildFallback = is_string($adminCssFallback) && is_string($adminJsFallback);
   @endphp
-  @if ($canUseBuildAssets)
+  @if ($useLegacyAdminAssets)
+    <link rel="stylesheet" href="{{ asset('assets/admin/admin.css') }}">
+    <script defer src="{{ asset('assets/admin/admin.js') }}"></script>
+  @elseif ($canUseBuildAssets)
     <link rel="stylesheet" href="{{ asset('build/' . $adminCss) }}">
     <script type="module" src="{{ asset('build/' . $adminJs) }}"></script>
   @elseif ($canUseBuildFallback)
@@ -43,18 +48,19 @@
   <div class="bg-aurora"></div>
   <div id="toast" class="toast" role="status" aria-live="polite" aria-atomic="true"></div>
 
+  @if ($adminPage === 'login')
   <div id="login-view" class="relative min-h-screen flex items-center justify-center px-6 py-12">
     <!-- Main Panel -->
     <div class="panel w-full max-w-md p-8 md:px-10 py-10 pb-16 space-y-7 fade-up relative" style="border-radius: var(--r-card);">
       
       <!-- Brand Logo & Header -->
-      <div class="flex flex-col items-center text-center space-y-4">
-        <div class="login-brand-logo-wrap">
+      <div class="login-header">
+        <div class="login-brand-logo-wrap" aria-hidden="true">
           <img src="{{ asset('images/admin-logo.png') }}" alt="LaundryHub logo" class="login-brand-logo" />
         </div>
         
         <!-- Typography -->
-        <div class="space-y-1.5">
+        <div class="login-copy">
           <h1 class="heading-font text-2xl font-bold" style="color: var(--color-text-primary);">Welcome back, Admin</h1>
           <p class="text-[13px] text-muted text-balance max-w-xs mx-auto leading-relaxed">
             Sign in to access your admin dashboard and manage laundry operations.
@@ -63,7 +69,7 @@
       </div>
 
       <!-- Auth Form -->
-      <form id="login-form" class="space-y-4">
+      <form id="login-form" class="login-form">
         <!-- Email Input -->
         <div class="space-y-1.5">
           <label class="text-[11px] font-semibold text-muted tracking-wide uppercase">Email address</label>
@@ -89,15 +95,15 @@
         </div>
         
         <!-- Submit Button -->
-        <button id="login-submit" type="submit" class="button-primary w-full button-with-spinner mt-2" aria-busy="false" style="padding: 10px; font-size: 13px;">
-          <span class="btn-label">Sign in to dashboard</span>
+        <button id="login-submit" type="submit" class="button-primary button-with-spinner login-submit-btn" aria-busy="false" style="padding: 10px; font-size: 13px;">
+          <span class="btn-label">Sign in</span>
           <span class="btn-spinner hidden" aria-hidden="true"></span>
         </button>
         <div id="login-error" class="hidden text-[12px] font-medium text-red-600 mt-2 text-center"></div>
       </form>
 
       <!-- Warning Notice Pill -->
-      <div class="flex items-center justify-center gap-2 py-2 px-4 mx-auto w-max rounded-full" style="background: var(--badge-amber-bg); color: var(--badge-amber-text);">
+      <div class="login-warning-pill">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width:12px;height:12px;">
           <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
           <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
@@ -113,6 +119,7 @@
       </div>
     </div>
   </div>
+  @else
 
   <div id="app-view" class="hidden relative min-h-screen">
     <header class="mobile-topbar">
@@ -145,36 +152,39 @@
           </div>
 
           <nav class="nav-list">
-            <button class="nav-link active" data-view="dashboard" type="button">
-              <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
-              </span>
-              <span>Dashboard</span>
-            </button>
-            <button class="nav-link" data-view="bookings" type="button">
-              <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
-              </span>
-              <span>Bookings</span>
-            </button>
-            <button class="nav-link" data-view="customers" type="button">
-              <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-              </span>
-              <span>Customers</span>
-            </button>
-            <button class="nav-link" data-view="analytics" type="button">
-              <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
-              </span>
-              <span>Analytics and Reports</span>
-            </button>
-            <button class="nav-link" data-view="services" type="button">
-              <span class="nav-icon">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
-              </span>
-              <span>Services</span>
-            </button>
+            <div class="sidebar-menu-group">
+              <p class="sidebar-menu-title">Main Menu</p>
+              <button class="nav-link active" data-view="dashboard" type="button">
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+                </span>
+                <span>Dashboard</span>
+              </button>
+              <button class="nav-link" data-view="bookings" type="button">
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
+                </span>
+                <span>Bookings</span>
+              </button>
+              <button class="nav-link" data-view="customers" type="button">
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                </span>
+                <span>Customers</span>
+              </button>
+              <button class="nav-link" data-view="services" type="button">
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.07 4.93A10 10 0 1 0 4.93 19.07"/><path d="M12 2v2M12 20v2M2 12h2M20 12h2"/></svg>
+                </span>
+                <span>Services</span>
+              </button>
+              <button class="nav-link" data-view="analytics" type="button">
+                <span class="nav-icon">
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+                </span>
+                <span>Analytics and Reports</span>
+              </button>
+            </div>
           </nav>
 
           <div class="sidebar-footer">
@@ -186,12 +196,12 @@
         </div>
       </aside>
 
-      <main class="space-y-8">
+      <main class="space-y-4">
         <div class="main-toolbar">
           <div class="admin-profile-chip">
             <div id="header-admin-avatar" class="admin-profile-avatar">A</div>
             <div class="admin-profile-copy">
-              <p id="header-admin-name" class="admin-profile-name">LaundryHub Admin</p>
+              <p id="header-admin-name" class="admin-profile-name">Admin</p>
               <p class="admin-profile-role">ADMINISTRATOR</p>
             </div>
           </div>
@@ -406,36 +416,127 @@
           <header class="flex flex-col gap-3">
             <div>
               <h1 class="heading-font text-3xl font-semibold">Analytics and Reports</h1>
-              <p class="text-sm text-muted">Track revenue trends, service mix, and performance insights.</p>
+              <p class="text-sm text-muted">Monitor revenue, bookings, customers, and service performance.</p>
             </div>
           </header>
 
-          <div class="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
-            <div class="panel p-6 space-y-4">
-              <div class="flex items-center justify-between">
+          <div class="analytics-hero panel">
+            <div class="analytics-hero-copy">
+              <p class="analytics-eyebrow">Current report window</p>
+              <h2 class="heading-font">Operations snapshot</h2>
+              <p id="analytics-month" class="text-sm text-muted">Loading report period...</p>
+            </div>
+            <div class="analytics-hero-metrics">
+              <div>
+                <span class="analytics-mini-label">Monthly revenue</span>
+                <strong id="analytics-monthly-revenue">--</strong>
+              </div>
+              <div>
+                <span class="analytics-mini-label">Completion rate</span>
+                <strong id="analytics-completion-rate">--</strong>
+              </div>
+            </div>
+          </div>
+
+          <div class="analytics-kpi-grid">
+            <div class="panel analytics-kpi-card">
+              <p class="card-label">Monthly revenue</p>
+              <div id="analytics-monthly-card" class="card-value heading-font">--</div>
+              <div class="stat-badge green">Live sales</div>
+            </div>
+            <div class="panel analytics-kpi-card">
+              <p class="card-label">Orders this month</p>
+              <div id="analytics-monthly-orders" class="card-value heading-font">--</div>
+              <div class="stat-badge blue">All statuses</div>
+            </div>
+            <div class="panel analytics-kpi-card">
+              <p class="card-label">New customers</p>
+              <div id="analytics-new-customers" class="card-value heading-font">--</div>
+              <div id="analytics-total-customers" class="stat-badge muted">-- total</div>
+            </div>
+            <div class="panel analytics-kpi-card">
+              <p class="card-label">Completed orders</p>
+              <div id="analytics-completed-orders" class="card-value heading-font">--</div>
+              <div id="analytics-cancelled-orders" class="stat-badge red">-- cancelled</div>
+            </div>
+          </div>
+
+          <div class="analytics-main-grid">
+            <div class="panel analytics-chart-card">
+              <div class="analytics-card-header">
                 <div>
+                  <p class="analytics-eyebrow">Revenue trend</p>
                   <h3 class="heading-font text-lg font-semibold">Weekly revenue</h3>
-                  <p class="text-xs text-muted" id="analytics-month"></p>
                 </div>
-                <div class="text-sm font-semibold" id="analytics-monthly-revenue">--</div>
+                <span class="analytics-chip">Mon-Sun</span>
               </div>
               <div class="h-48 flex items-end justify-between gap-4" id="weekly-bars"></div>
             </div>
 
-            <div class="panel p-6 space-y-4">
-              <h3 class="heading-font text-lg font-semibold">Service breakdown</h3>
-              <div id="service-breakdown-body" class="space-y-4"></div>
+            <div class="panel analytics-insights-card">
+              <div class="analytics-card-header">
+                <div>
+                  <p class="analytics-eyebrow">Action points</p>
+                  <h3 class="heading-font text-lg font-semibold">Quick insights</h3>
+                </div>
+              </div>
+              <div class="analytics-insight-list">
+                <div class="analytics-insight-row">
+                  <span class="analytics-insight-icon">01</span>
+                  <div>
+                    <p>Top service</p>
+                    <strong id="analytics-top-service">--</strong>
+                    <span id="analytics-top-service-meta">Waiting for data</span>
+                  </div>
+                </div>
+                <div class="analytics-insight-row">
+                  <span class="analytics-insight-icon">02</span>
+                  <div>
+                    <p>Best customer</p>
+                    <strong id="analytics-top-customer">--</strong>
+                    <span id="analytics-top-customer-meta">Waiting for data</span>
+                  </div>
+                </div>
+                <div class="analytics-insight-row">
+                  <span class="analytics-insight-icon">03</span>
+                  <div>
+                    <p>Order health</p>
+                    <strong id="analytics-order-health">--</strong>
+                    <span>Completed vs active monthly orders</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 
-          <div class="grid gap-6 lg:grid-cols-2">
-            <div class="panel p-6 space-y-2">
-              <div class="text-xs text-muted">Monthly revenue</div>
-              <div id="analytics-monthly-card" class="heading-font text-2xl font-semibold">--</div>
+          <div class="analytics-detail-grid">
+            <div class="panel analytics-breakdown-card">
+              <div class="analytics-card-header">
+                <div>
+                  <p class="analytics-eyebrow">Service mix</p>
+                  <h3 class="heading-font text-lg font-semibold">Service breakdown</h3>
+                </div>
+              </div>
+              <div class="analytics-breakdown">
+                <div class="breakdown-donut">
+                  <div id="service-breakdown-donut" class="donut-chart" role="img" aria-label="Service breakdown chart"></div>
+                  <div class="donut-center">
+                    <div class="donut-center-label">Total</div>
+                    <div id="service-breakdown-total" class="donut-center-value">0%</div>
+                  </div>
+                </div>
+                <div id="service-breakdown-body" class="breakdown-legend"></div>
+              </div>
             </div>
-            <div class="panel p-6 space-y-2">
-              <div class="text-xs text-muted">Avg rating</div>
-              <div id="analytics-avg-rating" class="heading-font text-2xl font-semibold">N/A</div>
+
+            <div class="panel analytics-customers-card">
+              <div class="analytics-card-header">
+                <div>
+                  <p class="analytics-eyebrow">Customer value</p>
+                  <h3 class="heading-font text-lg font-semibold">Top customers</h3>
+                </div>
+              </div>
+              <div id="analytics-top-customers-list" class="analytics-customer-list"></div>
             </div>
           </div>
         </section>
@@ -627,5 +728,6 @@
       <button id="customer-save" class="button-primary w-full" type="button">Save changes</button>
     </div>
   </div>
+  @endif
 </body>
 </html>
