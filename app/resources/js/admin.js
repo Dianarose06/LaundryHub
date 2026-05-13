@@ -1,4 +1,4 @@
-﻿import './bootstrap';
+import './bootstrap';
 
 const state = {
   token: null,
@@ -462,8 +462,14 @@ async function handleLogin(event) {
       return;
     }
 
-    const user = res.data?.user || null;
-    const token = `${res.data?.token || ''}`.trim();
+    const user = res.data?.user || res.data?.data?.user || null;
+    const token = `${
+      res.data?.token ||
+      res.data?.access_token ||
+      res.data?.data?.token ||
+      res.data?.data?.access_token ||
+      ''
+    }`.trim();
     const role = normalizeRole(user?.role);
 
     if (!token) {
@@ -865,7 +871,16 @@ async function loadBookings() {
       </td>
       <td><span class="order-created-date">${formattedDate}</span></td>
       <td>
-        <button class="btn-details" data-booking-toggle="${orderId}" type="button">Details</button>
+        <div style="display:flex; gap:6px; align-items:center;">
+          <button class="btn-action-pill btn-action-details" data-booking-toggle="${orderId}" type="button">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+            Details
+          </button>
+          <button class="btn-action-pill btn-action-receipt" data-cod-receipt-id="${orderId}" type="button">
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+            Receipt
+          </button>
+        </div>
       </td>
     `;
     body.appendChild(row);
@@ -1439,6 +1454,18 @@ function bindEvents() {
     });
 
     bookingsTable.addEventListener('click', (event) => {
+      const receiptBtn = event.target.closest('[data-cod-receipt-id]');
+      if (receiptBtn) {
+        const orderId = receiptBtn.dataset.codReceiptId;
+        const order = state.bookings.byId[String(orderId)];
+        if (order) {
+          openCodReceipt(order);
+        } else {
+          showToast('Receipt data unavailable. Please refresh.');
+        }
+        return;
+      }
+
       const toggle = event.target.closest('[data-booking-toggle]');
       if (toggle) {
         const orderId = toggle.dataset.bookingToggle;
@@ -1560,9 +1587,454 @@ function bindEvents() {
 
   const sidebarOverlay = qs('#sidebar-overlay');
   if (sidebarOverlay) sidebarOverlay.addEventListener('click', closeSidebar);
+
+  // COD Receipt close buttons
+  const codReceiptClose = qs('#cod-receipt-close');
+  if (codReceiptClose) codReceiptClose.addEventListener('click', closeCodReceipt);
+
+  const codReceiptCancel = qs('#cod-receipt-cancel');
+  if (codReceiptCancel) codReceiptCancel.addEventListener('click', closeCodReceipt);
+
+  const codReceiptPrint = qs('#cod-receipt-print');
+  if (codReceiptPrint) codReceiptPrint.addEventListener('click', printCodReceipt);
+
+  const codReceiptOverlay = qs('#cod-receipt-overlay');
+  if (codReceiptOverlay) codReceiptOverlay.addEventListener('click', closeCodReceipt);
 }
 
 window.addEventListener('DOMContentLoaded', () => {
   bindEvents();
   bootstrapApp();
 });
+
+// ── COD Receipt ─────────────────────────────────────────
+
+function openCodReceipt(order) {
+  const modal   = qs('#cod-receipt-modal');
+  const overlay = qs('#cod-receipt-overlay');
+  const body    = qs('#cod-receipt-body');
+  if (!modal || !overlay || !body) return;
+
+  const displayId        = formatOrderDisplayId(order);
+  const deliveryTypeLabel = formatDeliveryType(order.delivery_type);
+  const pickupDate       = formatDate(order.pickup_date);
+  const deliveryDate     = formatDate(order.delivery_date);
+  const createdAt        = formatDate(order.created_at);
+  const totalFormatted   = formatCurrency(order.total_price || 0);
+  const now              = new Date().toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
+
+  const row = (label, value, icon = '') => `
+    <tr>
+      <td style="padding:9px 12px; color:#58708D; font-size:12px; font-weight:500; width:42%; white-space:nowrap; vertical-align:middle;">
+        ${icon ? `<span style="margin-right:5px; opacity:0.7;">${icon}</span>` : ''}${label}
+      </td>
+      <td style="padding:9px 12px; color:#08213D; font-size:12.5px; font-weight:600; vertical-align:middle;">${value}</td>
+    </tr>`;
+
+  body.innerHTML = `
+    <div id="cod-receipt-print-area" style="font-family:'Segoe UI',Arial,sans-serif; color:#08213D; background:#fff;">
+
+      <!-- Branded Header -->
+      <div style="background:linear-gradient(135deg,#1565C0 0%,#0D47A1 100%); padding:22px 24px 20px; text-align:center; position:relative; overflow:hidden;">
+        <div style="position:absolute;top:-18px;right:-18px;width:90px;height:90px;border-radius:50%;background:rgba(255,255,255,0.07);"></div>
+        <div style="position:absolute;bottom:-24px;left:-12px;width:70px;height:70px;border-radius:50%;background:rgba(255,255,255,0.05);"></div>
+        <div style="font-size:10px; font-weight:800; letter-spacing:0.22em; text-transform:uppercase; color:rgba(255,255,255,0.65); margin-bottom:6px;">LaundryHub</div>
+        <div style="font-size:24px; font-weight:800; color:#fff; letter-spacing:-0.5px; margin-bottom:4px;">Cash on Delivery Receipt</div>
+        <div style="display:inline-block; background:rgba(255,255,255,0.15); border-radius:20px; padding:3px 14px; font-size:12px; font-weight:700; color:#fff; letter-spacing:0.05em;">${displayId}</div>
+        <div style="margin-top:6px; font-size:11px; color:rgba(255,255,255,0.55);">Issued: ${now}</div>
+      </div>
+
+      <!-- Detail Rows -->
+      <div style="padding:4px 0;">
+        <table style="width:100%; border-collapse:collapse;">
+          <tbody>
+            <tr style="background:#F8FBFF;">
+              <td colspan="2" style="padding:7px 12px; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#58708D;">Customer Info</td>
+            </tr>
+            ${row('Customer', escapeHtml(order.customer_name || 'N/A'), '👤')}
+            ${row('Address',  escapeHtml(order.pickup_address || 'N/A'), '📍')}
+            <tr style="background:#F8FBFF;">
+              <td colspan="2" style="padding:7px 12px; font-size:10px; font-weight:800; letter-spacing:0.12em; text-transform:uppercase; color:#58708D;">Order Details</td>
+            </tr>
+            ${row('Service',     escapeHtml(order.service_type || '---'), '🧺')}
+            ${row('Weight',      `${order.weight_kg || 0} kg`, '⚖️')}
+            ${row('Fulfillment', deliveryTypeLabel, '🚚')}
+            ${row('Pickup Date',   pickupDate, '📅')}
+            ${row('Delivery Date', deliveryDate, '📅')}
+            ${row('Order Date',    createdAt, '🗓️')}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Total Banner -->
+      <div style="margin:0 16px 16px; background:linear-gradient(135deg,#EEF4FF 0%,#E8F0FE 100%); border:1px solid rgba(21,101,192,0.18); border-radius:10px; padding:16px 20px; display:flex; align-items:center; justify-content:space-between;">
+        <div>
+          <div style="font-size:10px; font-weight:700; letter-spacing:0.10em; text-transform:uppercase; color:#58708D; margin-bottom:2px;">Total Amount Due</div>
+          <div style="font-size:26px; font-weight:800; color:#1565C0; letter-spacing:-0.5px;">${totalFormatted}</div>
+        </div>
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(21,101,192,0.1); display:flex; align-items:center; justify-content:center; font-size:22px;">💳</div>
+      </div>
+
+      <!-- COD Badge -->
+      <div style="margin:0 16px 20px; background:linear-gradient(135deg,#E8F5E9 0%,#F1F8E9 100%); border:1px solid rgba(46,125,50,0.20); border-radius:10px; padding:13px 16px; display:flex; align-items:center; gap:12px;">
+        <div style="width:36px; height:36px; border-radius:50%; background:#2E7D32; display:flex; align-items:center; justify-content:center; flex-shrink:0; font-size:17px;">✓</div>
+        <div>
+          <div style="font-size:13px; font-weight:700; color:#1B5E20; margin-bottom:2px;">Cash on Delivery (COD)</div>
+          <div style="font-size:11px; color:#388E3C; line-height:1.4;">Payment is collected at the time of delivery or pickup by our laundry staff.</div>
+        </div>
+      </div>
+
+    </div>
+  `;
+
+  modal.classList.remove('hidden');
+  modal.classList.add('show');
+  overlay.classList.add('show');
+}
+
+function closeCodReceipt() {
+  const modal   = qs('#cod-receipt-modal');
+  const overlay = qs('#cod-receipt-overlay');
+  if (modal)   { modal.classList.remove('show'); modal.classList.add('hidden'); }
+  if (overlay) { overlay.classList.remove('show'); }
+}
+
+function printCodReceipt() {
+  // Read order data from the live modal to build a self-contained print document.
+  const modal = qs('#cod-receipt-modal');
+  if (!modal || modal.classList.contains('hidden')) {
+    showToast('Open a receipt first.');
+    return;
+  }
+
+  // Grab text content from the rendered receipt body.
+  const get = (sel) => (modal.querySelector(sel)?.textContent?.trim() || '---');
+
+  // Pull all <td> label+value pairs from the detail table
+  const rows = Array.from(modal.querySelectorAll('#cod-receipt-print-area table tbody tr'))
+    .filter(tr => !tr.querySelector('[colspan]'))            // skip section-header rows
+    .map(tr => {
+      const cells = tr.querySelectorAll('td');
+      if (cells.length < 2) return null;
+      // strip the emoji from the label cell
+      const label = cells[0].textContent.replace(/[\u{1F000}-\u{1FFFF}]/gu, '').trim();
+      const value = cells[1].textContent.trim();
+      return { label, value };
+    })
+    .filter(Boolean);
+
+  // Order ID and total from the header / total banner
+  const orderId = modal.querySelector('.btn-action-receipt')?.dataset?.codReceiptId || '';
+  const headerEl    = modal.querySelector('#cod-receipt-print-area > div:first-child');
+  const headerLines = headerEl ? headerEl.querySelectorAll('div') : [];
+  // The displayId is in the inline-block pill (3rd div inside header)
+  const displayId   = headerLines[2]?.textContent?.trim() || '';
+  const issuedLine  = headerLines[3]?.textContent?.trim() || '';
+  const totalEl     = modal.querySelector('#cod-receipt-print-area [style*="font-size:26px"]');
+  const totalText   = totalEl?.textContent?.trim() || '';
+
+  const rowsHtml = rows.map(({ label, value }) => `
+    <tr>
+      <td class="label-col">${label}</td>
+      <td class="value-col">${value}</td>
+    </tr>`).join('');
+
+  // Group rows into Customer Info and Order Details
+  const customerLabels = ['Customer', 'Address'];
+  const customerRows = rows.filter(r => customerLabels.includes(r.label));
+  const orderRows    = rows.filter(r => !customerLabels.includes(r.label));
+
+  const buildRows = (arr) => arr.map(({ label, value }) => `
+    <tr>
+      <td class="label">${label}</td>
+      <td class="value">${value}</td>
+    </tr>`).join('');
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>COD Receipt ${displayId}</title>
+  <style>
+    @page {
+      size: A4;
+      margin: 18mm 18mm 20mm;
+    }
+    *, *::before, *::after {
+      box-sizing: border-box;
+      margin: 0; padding: 0;
+      print-color-adjust: exact;
+      -webkit-print-color-adjust: exact;
+    }
+    body {
+      font-family: 'Segoe UI', Arial, Helvetica, sans-serif;
+      color: #08213D;
+      background: #fff;
+      font-size: 13px;
+      line-height: 1.5;
+    }
+    .wrap { max-width: 520px; margin: 0 auto; }
+
+    /* Header */
+    .header {
+      background: linear-gradient(135deg, #1565C0 0%, #0D47A1 100%);
+      border-radius: 12px 12px 0 0;
+      padding: 28px 28px 24px;
+      text-align: center;
+      color: #fff;
+      position: relative;
+      overflow: hidden;
+    }
+    .header::before {
+      content: '';
+      position: absolute; top: -28px; right: -28px;
+      width: 110px; height: 110px; border-radius: 50%;
+      background: rgba(255,255,255,0.07);
+    }
+    .header::after {
+      content: '';
+      position: absolute; bottom: -30px; left: -18px;
+      width: 90px; height: 90px; border-radius: 50%;
+      background: rgba(255,255,255,0.05);
+    }
+    .brand-label {
+      font-size: 9px; font-weight: 800; letter-spacing: 0.24em;
+      text-transform: uppercase; color: rgba(255,255,255,0.6);
+      margin-bottom: 10px;
+    }
+    .receipt-icon {
+      font-size: 28px; margin-bottom: 10px; display: block;
+    }
+    .title {
+      font-size: 22px; font-weight: 800;
+      letter-spacing: -0.4px; margin-bottom: 8px;
+    }
+    .order-pill {
+      display: inline-block;
+      background: rgba(255,255,255,0.17);
+      border-radius: 20px; padding: 3px 16px;
+      font-size: 12px; font-weight: 700;
+    }
+    .issued {
+      margin-top: 6px; font-size: 10.5px; color: rgba(255,255,255,0.55);
+    }
+
+    /* Detail section */
+    .section {
+      padding: 0 20px;
+      background: #fff;
+    }
+    .section-head {
+      padding: 8px 0 4px;
+      font-size: 9.5px; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #58708D;
+      border-bottom: 1px solid rgba(21,101,192,0.10);
+      margin-top: 16px;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    .label {
+      padding: 8px 0; width: 42%;
+      color: #58708D; font-size: 12px; font-weight: 500;
+    }
+    .value {
+      padding: 8px 0;
+      color: #08213D; font-size: 12.5px; font-weight: 600;
+    }
+    tr { border-bottom: 1px solid rgba(21,101,192,0.07); }
+    tr:last-child { border-bottom: none; }
+
+    /* Total */
+    .total-box {
+      margin: 18px 20px 0;
+      background: linear-gradient(135deg, #EEF4FF, #E8F0FE);
+      border: 1px solid rgba(21,101,192,0.18);
+      border-radius: 10px;
+      padding: 16px 20px;
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .total-label {
+      font-size: 9px; font-weight: 800;
+      letter-spacing: 0.14em; text-transform: uppercase;
+      color: #58708D; margin-bottom: 4px;
+    }
+    .total-amount {
+      font-size: 28px; font-weight: 800;
+      color: #1565C0; letter-spacing: -0.8px;
+    }
+    .total-icon {
+      font-size: 26px; opacity: 0.65;
+    }
+
+    /* COD badge */
+    .cod-box {
+      margin: 14px 20px 0;
+      background: linear-gradient(135deg, #E8F5E9, #F1F8E9);
+      border: 1px solid rgba(46,125,50,0.20);
+      border-radius: 10px;
+      padding: 13px 16px;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .cod-circle {
+      width: 36px; height: 36px; border-radius: 50%;
+      background: #2E7D32; color: #fff;
+      font-size: 18px; font-weight: 900;
+      display: flex; align-items: center; justify-content: center;
+      flex-shrink: 0;
+    }
+    .cod-title { font-size: 13px; font-weight: 700; color: #1B5E20; margin-bottom: 2px; }
+    .cod-sub   { font-size: 11px; color: #388E3C; line-height: 1.4; }
+
+    /* Footer */
+    .receipt-footer {
+      margin: 20px 20px 0;
+      padding-top: 14px;
+      border-top: 1px solid #e5e7eb;
+      text-align: center;
+      font-size: 10px; color: #9CA3AF;
+      line-height: 1.7;
+    }
+
+    /* Screen-only print button */
+    .print-hint {
+      margin: 20px 20px 0;
+      padding: 10px 14px;
+      background: #F0F9FF;
+      border: 1px solid #BAE6FD;
+      border-radius: 8px;
+      font-size: 11px; color: #0369A1; text-align: center;
+    }
+    @media print {
+      .print-hint { display: none; }
+      .wrap { max-width: 100%; }
+      .header { border-radius: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+
+    <div class="header">
+      <div class="brand-label">LaundryHub</div>
+      <span class="receipt-icon">🧾</span>
+      <div class="title">Cash on Delivery Receipt</div>
+      <div class="order-pill">${displayId}</div>
+      <div class="issued">${issuedLine}</div>
+    </div>
+
+    <div class="section">
+      <div class="section-head">Customer Information</div>
+      <table>
+        ${buildRows(customerRows)}
+      </table>
+
+      <div class="section-head">Order Details</div>
+      <table>
+        ${buildRows(orderRows)}
+      </table>
+    </div>
+
+    <div class="total-box">
+      <div>
+        <div class="total-label">Total Amount Paid</div>
+        <div class="total-amount">${totalText}</div>
+      </div>
+      <div class="total-icon">💳</div>
+    </div>
+
+    <div class="cod-box">
+      <div class="cod-circle">✓</div>
+      <div>
+        <div class="cod-title">Cash on Delivery (COD)</div>
+        <div class="cod-sub">Payment is collected at the time of delivery or pickup by our laundry staff.</div>
+      </div>
+    </div>
+
+    <div class="print-hint">
+      💡 To save as PDF: In the print dialog, set <strong>Destination → Save as PDF</strong>, then click Save.
+    </div>
+
+    <div class="receipt-footer">
+      © 2026 LaundryHub &nbsp;·&nbsp; Cash on Delivery Receipt<br>
+      Keep this receipt for your records. Thank you for choosing LaundryHub!
+    </div>
+
+  </div>
+</body>
+</html>`;
+
+  const win = window.open('', '_blank', 'width=680,height=860');
+  if (!win) {
+    showToast('Allow pop-ups to print/save this receipt.');
+    return;
+  }
+
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+
+  // Fire print() only after full load — works for both Print and Save as PDF
+  win.onload = () => {
+    win.focus();
+    win.print();
+  };
+}
+
+    return;
+  }
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html lang="en">
+      <head>
+        <meta charset="utf-8" />
+        <title>COD Receipt</title>
+        <style>
+          * { box-sizing: border-box; margin: 0; padding: 0; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            color: #08213D;
+            background: #fff;
+            padding: 0;
+          }
+          .receipt-wrap { max-width: 480px; margin: 0 auto; padding-bottom: 24px; }
+          .receipt-header {
+            background: linear-gradient(135deg,#1565C0,#0D47A1);
+            padding: 24px; text-align: center; color: #fff;
+          }
+          .receipt-header .brand { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.65; margin-bottom: 6px; }
+          .receipt-header .title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
+          .receipt-header .order-id { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 2px 14px; font-size: 12px; font-weight: 700; }
+          .receipt-header .date { margin-top: 5px; font-size: 11px; opacity: 0.55; }
+          table { width: 100%; border-collapse: collapse; }
+          td { padding: 9px 16px; font-size: 13px; vertical-align: middle; }
+          .section-head td { padding: 7px 16px; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; background: #F8FBFF; }
+          .label-col { color: #58708D; font-weight: 500; width: 42%; }
+          .value-col { color: #08213D; font-weight: 600; }
+          .total-box { margin: 16px; background: linear-gradient(135deg,#EEF4FF,#E8F0FE); border: 1px solid rgba(21,101,192,0.18); border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
+          .total-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; margin-bottom: 3px; }
+          .total-amount { font-size: 26px; font-weight: 800; color: #1565C0; }
+          .cod-box { margin: 0 16px 20px; background: linear-gradient(135deg,#E8F5E9,#F1F8E9); border: 1px solid rgba(46,125,50,0.20); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
+          .cod-icon { width: 36px; height: 36px; border-radius: 50%; background: #2E7D32; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+          .cod-title { font-size: 13px; font-weight: 700; color: #1B5E20; margin-bottom: 2px; }
+          .cod-sub { font-size: 11px; color: #388E3C; line-height: 1.4; }
+          .footer { text-align: center; font-size: 10px; color: #9CA3AF; margin-top: 20px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
+          @media print {
+            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+          }
+        </style>
+      </head>
+      <body>
+        <div class="receipt-wrap">
+          ${printArea.innerHTML}
+          <div class="footer">© 2026 LaundryHub · Cash on Delivery Receipt · Keep this for your records.</div>
+        </div>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.focus();
+  setTimeout(() => win.print(), 400);
+}

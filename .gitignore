@@ -30,3 +30,7 @@ app/.git/
 
 # Firebase credentials - NEVER commit this!
 app/storage/app/firebase-credentials.json
+
+# Dependencies
+app/node_modules/
+app/package-lock.json

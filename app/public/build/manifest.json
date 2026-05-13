@@ -1,16 +1,24 @@
-﻿{
+{
   "resources/css/admin.css": {
-    "file": "assets/admin-gtR2lUlJ.css",
+    "file": "assets/admin-Dz4DtpZI.css",
     "src": "resources/css/admin.css",
-    "isEntry": true
+    "isEntry": true,
+    "name": "admin",
+    "names": [
+      "admin.css"
+    ]
   },
   "resources/css/app.css": {
-    "file": "assets/app-DZdggfpD.css",
+    "file": "assets/app-BeObupqe.css",
     "src": "resources/css/app.css",
-    "isEntry": true
+    "isEntry": true,
+    "name": "app",
+    "names": [
+      "app.css"
+    ]
   },
   "resources/js/admin.js": {
-    "file": "assets/admin-BraOqUXL.js",
+    "file": "assets/admin-BcxA0n8X.js",
     "name": "admin",
     "src": "resources/js/admin.js",
     "isEntry": true,
@@ -19,7 +27,7 @@
     ]
   },
   "resources/js/app.js": {
-    "file": "assets/app-taXXq4rK.js",
+    "file": "assets/app-UyRVujZY.js",
     "name": "app",
     "src": "resources/js/app.js",
     "isEntry": true

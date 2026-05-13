@@ -1,4 +1,4 @@
-﻿@import 'tailwindcss';
+@import 'tailwindcss';
 
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../storage/framework/views/*.php';
@@ -1007,20 +1007,59 @@ main {
   border: 0.5px solid var(--color-primary);
 }
 
-.btn-details {
-  padding: 4px 12px;
-  border-radius: 6px;
-  border: 0.5px solid var(--color-border);
-  background: transparent;
+/* ── Action Pill Buttons (Details + Receipt) ─────────── */
+.btn-action-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 5px 11px;
+  border-radius: 20px;
   font-size: 11px;
-  color: var(--color-text-secondary);
+  font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s, transform 0.12s, box-shadow 0.15s;
+  white-space: nowrap;
+  letter-spacing: 0.01em;
 }
 
-.btn-details:hover {
-  background: var(--color-bg-page);
-  color: var(--color-text-primary);
+.btn-action-pill:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 3px 8px rgba(0,0,0,0.10);
+}
+
+.btn-action-pill:active {
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-action-details {
+  background: #EEF3FA;
+  border-color: rgba(21, 101, 192, 0.18);
+  color: #1565C0;
+}
+
+.btn-action-details:hover {
+  background: #E3EBF6;
+  border-color: rgba(21, 101, 192, 0.32);
+  color: #0D47A1;
+}
+
+.btn-action-receipt {
+  background: #EDFAF4;
+  border-color: rgba(22, 163, 74, 0.22);
+  color: #166534;
+}
+
+.btn-action-receipt:hover {
+  background: #D8F3E6;
+  border-color: rgba(22, 163, 74, 0.38);
+  color: #14532D;
+}
+
+.btn-action-pill svg {
+  flex-shrink: 0;
+  opacity: 0.85;
 }
 
 .order-customer-cell {

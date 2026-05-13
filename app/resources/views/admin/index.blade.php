@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="utf-8" />
@@ -9,11 +9,10 @@
   <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Work+Sans:wght@400;500;600&display=swap" rel="stylesheet" />
   @php
     $adminPage = $adminPage ?? 'dashboard';
-    $useLegacyAdminAssets = app()->environment('local');
     $manifestPath = public_path('build/manifest.json');
     $manifest = file_exists($manifestPath) ? json_decode(file_get_contents($manifestPath), true) : [];
     $adminCss = is_array($manifest) ? data_get($manifest, 'resources/css/admin.css.file') : null;
-    $adminJs = is_array($manifest) ? data_get($manifest, 'resources/js/admin.js.file') : null;
+    $adminJs  = is_array($manifest) ? data_get($manifest, 'resources/js/admin.js.file') : null;
     $canUseBuildAssets = is_string($adminCss) && is_string($adminJs);
 
     $adminCssFallback = collect(glob(public_path('build/assets/admin-*.css')) ?: [])
@@ -27,10 +26,7 @@
   <script>
     window.LAUNDRYHUB_API_BASE_URL = @json(rtrim(url('/api'), '/'));
   </script>
-  @if ($useLegacyAdminAssets)
-    <link rel="stylesheet" href="{{ asset('assets/admin/admin.css') }}">
-    <script defer src="{{ asset('assets/admin/admin.js') }}"></script>
-  @elseif ($canUseBuildAssets)
+  @if ($canUseBuildAssets)
     <link rel="stylesheet" href="{{ asset('build/' . $adminCss) }}">
     <script type="module" src="{{ asset('build/' . $adminJs) }}"></script>
   @elseif ($canUseBuildFallback)
@@ -38,7 +34,7 @@
     <script type="module" src="{{ asset($adminJsFallback) }}"></script>
   @else
     <link rel="stylesheet" href="{{ asset('assets/admin/admin.css') }}">
-    <script defer src="{{ asset('assets/admin/admin.js') }}"></script>
+    <script type="module" src="{{ asset('assets/admin/admin.js') }}"></script>
   @endif
   <style>
     html, body {
@@ -346,7 +342,7 @@
                   <col style="width: 75px;" />
                   <col style="width: 105px;" />
                   <col style="width: 90px;" />
-                  <col style="width: 70px;" />
+                  <col style="width: 150px;" />
                 </colgroup>
                 <thead>
                   <tr>
@@ -752,6 +748,35 @@
       <button id="customer-save" class="button-primary w-full" type="button">Save changes</button>
     </div>
   </div>
+
+  <!-- ================= COD RECEIPT MODAL ================= -->
+  <div id="cod-receipt-overlay" class="overlay" style="z-index:54;"></div>
+
+  <div id="cod-receipt-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="cod-receipt-title" style="z-index:55;">
+    <div class="modal-panel" style="width:min(560px,95vw); max-height:88vh; display:flex; flex-direction:column; overflow:hidden;">
+
+      <!-- HEADER -->
+      <div class="modal-header">
+        <div>
+          <h3 id="cod-receipt-title" class="heading-font text-lg font-semibold">COD Receipt</h3>
+          <p class="text-xs text-muted">Cash on Delivery — Payment Record</p>
+        </div>
+        <button id="cod-receipt-close" class="modal-close button-outline" type="button" aria-label="Close receipt">✕</button>
+      </div>
+
+      <!-- BODY -->
+      <div id="cod-receipt-body" class="modal-body" style="flex:1; overflow-y:auto;"></div>
+
+      <!-- FOOTER -->
+      <div style="padding:12px 16px; border-top:0.5px solid var(--color-border); display:flex; gap:8px; justify-content:flex-end;">
+        <button id="cod-receipt-print" class="button-primary" type="button">Print Receipt</button>
+        <button id="cod-receipt-cancel" class="button-outline" type="button">Close</button>
+      </div>
+
+    </div>
+  </div>
+
   @endif
+
 </body>
 </html>
