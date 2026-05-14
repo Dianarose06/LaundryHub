@@ -43,6 +43,14 @@ class ApiConfig {
   static String get apiPath => '$baseUrl/api';
   static String get adminWebUrl => '$baseUrl/admin';
 
+  static String get adminRedirectUrl {
+    const fromEnv = String.fromEnvironment('ADMIN_REDIRECT_URL');
+    if (fromEnv.isNotEmpty) {
+      return fromEnv;
+    }
+    return adminWebUrl;
+  }
+
   static String get _webBaseUrl {
     final scheme = Uri.base.scheme.isNotEmpty ? Uri.base.scheme : 'http';
     final rawHost = Uri.base.host.isNotEmpty ? Uri.base.host : 'localhost';
