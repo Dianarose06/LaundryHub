@@ -1981,60 +1981,119 @@ function printCodReceipt() {
   };
 }
 
+// ==========================================
+// REPORTS DOWNLOAD
+// ==========================================
+
+function downloadCSVReport() {
+  const orders = Object.values(state.bookings.byId || {});
+  if (!orders.length) {
+    showToast('No orders available to export. Please load bookings first.');
     return;
   }
 
+  const headers = ['Order ID', 'Customer', 'Service', 'Weight (kg)', 'Total Price', 'Status', 'Date'];
+  const rows = orders.map(o => [
+    formatOrderDisplayId(o),
+    `"${escapeHtml(o.customer_name || 'N/A')}"`,
+    `"${escapeHtml(o.service_type || 'N/A')}"`,
+    o.weight_kg || 0,
+    o.total_price || 0,
+    normalizeStatus(o.status),
+    formatDate(o.created_at)
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `LaundryHub_Orders_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadPDFReport() {
+  const orders = Object.values(state.bookings.byId || {});
+  if (!orders.length) {
+    showToast('No orders available to export. Please load bookings first.');
+    return;
+  }
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  if (!win) {
+    showToast('Please allow pop-ups to generate PDF report.');
+    return;
+  }
+
+  const rowsHtml = orders.map(o => `
+    <tr>
+      <td>${formatOrderDisplayId(o)}</td>
+      <td>${escapeHtml(o.customer_name || 'N/A')}</td>
+      <td>${escapeHtml(o.service_type || 'N/A')}</td>
+      <td>${o.weight_kg || 0}kg</td>
+      <td>${formatCurrency(o.total_price || 0)}</td>
+      <td><span style="text-transform:capitalize;">${normalizeStatus(o.status)}</span></td>
+    </tr>
+  `).join('');
+
   win.document.write(`
     <!DOCTYPE html>
-    <html lang="en">
+    <html>
       <head>
-        <meta charset="utf-8" />
-        <title>COD Receipt</title>
+        <title>LaundryHub Monthly Report</title>
         <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #08213D;
-            background: #fff;
-            padding: 0;
-          }
-          .receipt-wrap { max-width: 480px; margin: 0 auto; padding-bottom: 24px; }
-          .receipt-header {
-            background: linear-gradient(135deg,#1565C0,#0D47A1);
-            padding: 24px; text-align: center; color: #fff;
-          }
-          .receipt-header .brand { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.65; margin-bottom: 6px; }
-          .receipt-header .title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
-          .receipt-header .order-id { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 2px 14px; font-size: 12px; font-weight: 700; }
-          .receipt-header .date { margin-top: 5px; font-size: 11px; opacity: 0.55; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 9px 16px; font-size: 13px; vertical-align: middle; }
-          .section-head td { padding: 7px 16px; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; background: #F8FBFF; }
-          .label-col { color: #58708D; font-weight: 500; width: 42%; }
-          .value-col { color: #08213D; font-weight: 600; }
-          .total-box { margin: 16px; background: linear-gradient(135deg,#EEF4FF,#E8F0FE); border: 1px solid rgba(21,101,192,0.18); border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
-          .total-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; margin-bottom: 3px; }
-          .total-amount { font-size: 26px; font-weight: 800; color: #1565C0; }
-          .cod-box { margin: 0 16px 20px; background: linear-gradient(135deg,#E8F5E9,#F1F8E9); border: 1px solid rgba(46,125,50,0.20); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-          .cod-icon { width: 36px; height: 36px; border-radius: 50%; background: #2E7D32; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-          .cod-title { font-size: 13px; font-weight: 700; color: #1B5E20; margin-bottom: 2px; }
-          .cod-sub { font-size: 11px; color: #388E3C; line-height: 1.4; }
-          .footer { text-align: center; font-size: 10px; color: #9CA3AF; margin-top: 20px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
-          @media print {
-            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-          }
+          body { font-family: 'Segoe UI', Arial, sans-serif; color: #08213D; padding: 40px; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #1565C0; padding-bottom: 20px; }
+          .header h1 { margin: 0 0 10px 0; color: #1565C0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+          th { background: #f1f5f9; text-align: left; padding: 10px; border-bottom: 2px solid #cbd5e1; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          @page { size: A4 portrait; margin: 20mm; }
+          @media print { .hint { display: none; } }
         </style>
       </head>
       <body>
-        <div class="receipt-wrap">
-          ${printArea.innerHTML}
-          <div class="footer">© 2026 LaundryHub · Cash on Delivery Receipt · Keep this for your records.</div>
+        <div class="hint" style="background:#e0f2fe; padding:10px; margin-bottom:20px; text-align:center; color:#0369a1; border-radius:6px; font-size:13px;">
+          💡 To save as PDF: Choose "Save as PDF" in the print dialog.
         </div>
+        <div class="header">
+          <h1>LaundryHub Orders Report</h1>
+          <p>Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Weight</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
       </body>
     </html>
   `);
 
   win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 400);
+  win.onload = () => {
+    win.focus();
+    win.print();
+  };
 }
+
+// Initialize the new report buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCsv = document.getElementById('btn-download-csv');
+  const btnPdf = document.getElementById('btn-download-pdf');
+  
+  if (btnCsv) btnCsv.addEventListener('click', downloadCSVReport);
+  if (btnPdf) btnPdf.addEventListener('click', downloadPDFReport);
+});
