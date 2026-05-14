@@ -1986,9 +1986,15 @@ function printCodReceipt() {
 // ==========================================
 
 function downloadCSVReport() {
-  const orders = Object.values(state.bookings.byId || {});
+  const filterVal = document.getElementById('report-filter')?.value || 'all';
+  let orders = Object.values(state.bookings.byId || {});
+  
+  if (filterVal !== 'all') {
+    orders = orders.filter(o => normalizeStatus(o.status) === filterVal);
+  }
+
   if (!orders.length) {
-    showToast('No orders available to export. Please load bookings first.');
+    showToast('No orders available to export for the selected filter.');
     return;
   }
 
@@ -2016,9 +2022,15 @@ function downloadCSVReport() {
 }
 
 function downloadPDFReport() {
-  const orders = Object.values(state.bookings.byId || {});
+  const filterVal = document.getElementById('report-filter')?.value || 'all';
+  let orders = Object.values(state.bookings.byId || {});
+  
+  if (filterVal !== 'all') {
+    orders = orders.filter(o => normalizeStatus(o.status) === filterVal);
+  }
+
   if (!orders.length) {
-    showToast('No orders available to export. Please load bookings first.');
+    showToast('No orders available to export for the selected filter.');
     return;
   }
 
