@@ -12,7 +12,6 @@ use App\Notifications\OrderStatusUpdated;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\Rule;
@@ -182,21 +181,19 @@ class AdminController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $stats = Cache::remember('admin_stats', 300, function () {
-            $today = Carbon::today();
+        $today = Carbon::today();
 
-            return [
-                'total_bookings' => Order::count(),
-                'pending_count'  => Order::where('status', 'pending')->count(),
-                'revenue_today'  => (float) Order::whereDate('created_at', $today)
-                    ->where('status', '!=', 'cancelled')
-                    ->sum('total_price'),
-                'customer_count' => User::where('role', 'customer')->count(),
-            ];
-        });
+        $stats = [
+            'total_bookings' => Order::count(),
+            'pending_count'  => Order::where('status', 'pending')->count(),
+            'revenue_today'  => (float) Order::whereDate('created_at', $today)
+                ->where('status', '!=', 'cancelled')
+                ->sum('total_price'),
+            'customer_count' => User::where('role', 'customer')->count(),
+        ];
 
         return response()->json($stats)
-            ->header('Cache-Control', 'public, max-age=300');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function recentOrders(Request $request)
@@ -268,6 +265,36 @@ class AdminController extends Controller
                 'last_page' => $paginated->lastPage(),
             ],
         ]);
+    }
+
+    public function bookingSummaries(Request $request)
+    {
+        $this->ensureAdmin($request);
+
+        $statusCounts = Order::query()
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->map(fn ($count) => (int) $count);
+
+        $byStatus = [
+            'pending' => (int) ($statusCounts['pending'] ?? 0),
+            'ongoing' => (int) ($statusCounts['ongoing'] ?? 0),
+            'ready' => (int) ($statusCounts['ready'] ?? 0),
+            'completed' => (int) ($statusCounts['completed'] ?? 0),
+            'cancelled' => (int) ($statusCounts['cancelled'] ?? 0),
+        ];
+
+        return response()->json([
+            'data' => [
+                'total' => array_sum($byStatus),
+                'by_status' => $byStatus,
+                'requested_bookings' => $byStatus['pending'],
+                'accepted_bookings' => $byStatus['ongoing'] + $byStatus['ready'],
+                'completed_bookings' => $byStatus['completed'],
+                'cancelled_bookings' => $byStatus['cancelled'],
+            ],
+        ])->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     public function updateOrderStatus(Request $request, Order $order)
@@ -343,80 +370,132 @@ class AdminController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $data = Cache::remember('admin_analytics', 600, function () {
+        $now = Carbon::now();
 
-            $now = Carbon::now();
+        $weekStart = $now->copy()->startOfWeek(Carbon::MONDAY);
+        $monthStart = $now->copy()->startOfMonth()->startOfDay();
+        $monthEnd = $now->copy()->endOfMonth()->endOfDay();
 
-            $weekStart = $now->copy()->startOfWeek(Carbon::MONDAY);
+        $weekEnd = $weekStart->copy()->addDays(6)->endOfDay();
+        $weeklyRows = DB::table('orders')
+            ->selectRaw('DATE(created_at) as revenue_date, SUM(total_price) as revenue')
+            ->whereBetween('created_at', [$weekStart->copy()->startOfDay(), $weekEnd])
+            ->where('status', '!=', 'cancelled')
+            ->groupBy(DB::raw('DATE(created_at)'))
+            ->pluck('revenue', 'revenue_date');
 
-            $weeklyRevenue = [];
+        $weeklyRevenue = [];
+        for ($i = 0; $i < 7; $i++) {
+            $dayKey = $weekStart->copy()->addDays($i)->toDateString();
+            $weeklyRevenue[] = (float) ($weeklyRows[$dayKey] ?? 0);
+        }
 
-            for ($i = 0; $i < 7; $i++) {
-                $day = $weekStart->copy()->addDays($i);
+        $serviceBreakdown = DB::table('orders')
+            ->selectRaw('services.name as service_name, COUNT(*) as order_count')
+            ->join('services', 'orders.service_id', '=', 'services.id')
+            ->where('orders.status', '!=', 'cancelled')
+            ->groupBy('services.id', 'services.name')
+            ->orderByDesc('order_count')
+            ->get();
 
-                $weeklyRevenue[] = (float) Order::whereDate('created_at', $day)
-                    ->where('status', '!=', 'cancelled')
-                    ->sum('total_price');
+        $totalOrders = $serviceBreakdown->sum('order_count');
+
+        $top3 = [];
+        $othersCount = 0;
+        $topService = null;
+
+        foreach ($serviceBreakdown as $index => $item) {
+            if ($index === 0) {
+                $topService = [
+                    'name' => $item->service_name ?? 'Unknown',
+                    'orders' => (int) $item->order_count,
+                ];
             }
 
-            $serviceBreakdown = Order::select(
-                    DB::raw('services.name as service_name'),
-                    DB::raw('COUNT(*) as order_count')
-                )
-                ->join('services', 'orders.service_id', '=', 'services.id')
-                ->where('orders.status', '!=', 'cancelled')
-                ->groupBy('services.id', 'services.name')
-                ->orderByDesc('order_count')
-                ->get();
-
-            $totalOrders = $serviceBreakdown->sum('order_count');
-
-            $top3 = [];
-            $othersCount = 0;
-
-            foreach ($serviceBreakdown as $index => $item) {
-
-                if ($index < 3) {
-
-                    $top3[] = [
-                        'name'  => $item->service_name ?? 'Unknown',
-                        'count' => $item->order_count,
-                        'pct'   => $totalOrders > 0 ? (int) round($item->order_count / $totalOrders * 100) : 0,
-                    ];
-
-                } else {
-
-                    $othersCount += $item->order_count;
-
-                }
-
-            }
-
-            if ($othersCount > 0) {
+            if ($index < 3) {
 
                 $top3[] = [
-                    'name'  => 'Others',
-                    'count' => $othersCount,
-                    'pct'   => $totalOrders > 0 ? (int) round($othersCount / $totalOrders * 100) : 0,
+                    'name'  => $item->service_name ?? 'Unknown',
+                    'count' => $item->order_count,
+                    'pct'   => $totalOrders > 0 ? (int) round($item->order_count / $totalOrders * 100) : 0,
                 ];
+
+            } else {
+
+                $othersCount += $item->order_count;
 
             }
 
-            $monthlyRevenue = (float) Order::whereMonth('created_at', $now->month)
-                ->whereYear('created_at', $now->year)
-                ->where('status', '!=', 'cancelled')
-                ->sum('total_price');
+        }
 
-            return [
-                'weekly_revenue'    => $weeklyRevenue,
-                'service_breakdown' => $top3,
-                'monthly_revenue'   => $monthlyRevenue,
-                'month_label'       => $now->format('F Y'),
+        if ($othersCount > 0) {
+
+            $top3[] = [
+                'name'  => 'Others',
+                'count' => $othersCount,
+                'pct'   => $totalOrders > 0 ? (int) round($othersCount / $totalOrders * 100) : 0,
             ];
-        });
+
+        }
+
+        $monthlyRevenue = (float) DB::table('orders')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->where('status', '!=', 'cancelled')
+            ->sum('total_price');
+
+        $monthlyStatusCounts = DB::table('orders')
+            ->select('status', DB::raw('COUNT(*) as total'))
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->groupBy('status')
+            ->pluck('total', 'status')
+            ->map(fn ($count) => (int) $count);
+
+        $totalOrdersThisMonth = (int) $monthlyStatusCounts->sum();
+        $completedOrdersThisMonth = (int) ($monthlyStatusCounts['completed'] ?? 0);
+        $cancelledOrdersThisMonth = (int) ($monthlyStatusCounts['cancelled'] ?? 0);
+        $activeOrdersThisMonth = max(0, $totalOrdersThisMonth - $cancelledOrdersThisMonth);
+        $completionRate = $activeOrdersThisMonth > 0
+            ? (int) round(($completedOrdersThisMonth / $activeOrdersThisMonth) * 100)
+            : 0;
+
+        $newCustomersThisMonth = User::where('role', 'customer')
+            ->whereBetween('created_at', [$monthStart, $monthEnd])
+            ->count();
+
+        $totalCustomers = User::where('role', 'customer')->count();
+
+        $topCustomers = User::where('role', 'customer')
+            ->withCount('orders')
+            ->withSum(['orders' => fn ($q) => $q->where('status', '!=', 'cancelled')], 'total_price')
+            ->having('orders_count', '>', 0)
+            ->orderByDesc('orders_sum_total_price')
+            ->limit(3)
+            ->get()
+            ->map(fn ($user) => [
+                'name' => $user->name,
+                'orders' => (int) $user->orders_count,
+                'spend' => (float) ($user->orders_sum_total_price ?? 0),
+                'spend_label' => '₱' . number_format($user->orders_sum_total_price ?? 0, 0),
+            ])
+            ->values();
+
+        $data = [
+            'weekly_revenue'    => $weeklyRevenue,
+            'service_breakdown' => $top3,
+            'monthly_revenue'   => $monthlyRevenue,
+            'total_orders_this_month' => $totalOrdersThisMonth,
+            'completed_orders_this_month' => $completedOrdersThisMonth,
+            'cancelled_orders_this_month' => $cancelledOrdersThisMonth,
+            'new_customers_this_month' => $newCustomersThisMonth,
+            'total_customers' => $totalCustomers,
+            'completion_rate' => $completionRate,
+            'top_service' => $topService,
+            'top_customers' => $topCustomers,
+            'month_label'       => $now->format('F Y'),
+        ];
 
         return response()->json($data)
-            ->header('Cache-Control', 'public, max-age=600');
+            ->header('Cache-Control', 'no-cache, no-store, must-revalidate');
     }
 
     /**
