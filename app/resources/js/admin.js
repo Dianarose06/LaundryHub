@@ -1990,3 +1990,133 @@ function printCodReceipt() {
     win.print();
   };
 }
+
+// ==========================================
+// REPORTS DOWNLOAD
+// ==========================================
+
+function downloadCSVReport() {
+  const filterVal = document.getElementById('report-filter')?.value || 'all';
+  let orders = Object.values(state.bookings.byId || {});
+  
+  if (filterVal !== 'all') {
+    orders = orders.filter(o => normalizeStatus(o.status) === filterVal);
+  }
+
+  if (!orders.length) {
+    showToast('No orders available to export for the selected filter.');
+    return;
+  }
+
+  const headers = ['Order ID', 'Customer', 'Service', 'Weight (kg)', 'Total Price', 'Status', 'Date'];
+  const rows = orders.map(o => [
+    formatOrderDisplayId(o),
+    `"${escapeHtml(o.customer_name || 'N/A')}"`,
+    `"${escapeHtml(o.service_type || 'N/A')}"`,
+    o.weight_kg || 0,
+    o.total_price || 0,
+    normalizeStatus(o.status),
+    formatDate(o.created_at)
+  ]);
+
+  const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+  const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  
+  const link = document.createElement('a');
+  link.href = url;
+  link.setAttribute('download', `LaundryHub_Orders_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}
+
+function downloadPDFReport() {
+  const filterVal = document.getElementById('report-filter')?.value || 'all';
+  let orders = Object.values(state.bookings.byId || {});
+  
+  if (filterVal !== 'all') {
+    orders = orders.filter(o => normalizeStatus(o.status) === filterVal);
+  }
+
+  if (!orders.length) {
+    showToast('No orders available to export for the selected filter.');
+    return;
+  }
+
+  const win = window.open('', '_blank', 'width=800,height=900');
+  if (!win) {
+    showToast('Please allow pop-ups to generate PDF report.');
+    return;
+  }
+
+  const rowsHtml = orders.map(o => `
+    <tr>
+      <td>${formatOrderDisplayId(o)}</td>
+      <td>${escapeHtml(o.customer_name || 'N/A')}</td>
+      <td>${escapeHtml(o.service_type || 'N/A')}</td>
+      <td>${o.weight_kg || 0}kg</td>
+      <td>${formatCurrency(o.total_price || 0)}</td>
+      <td><span style="text-transform:capitalize;">${normalizeStatus(o.status)}</span></td>
+    </tr>
+  `).join('');
+
+  win.document.write(`
+    <!DOCTYPE html>
+    <html>
+      <head>
+        <title>LaundryHub Monthly Report</title>
+        <style>
+          body { font-family: 'Segoe UI', Arial, sans-serif; color: #08213D; padding: 40px; }
+          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #1565C0; padding-bottom: 20px; }
+          .header h1 { margin: 0 0 10px 0; color: #1565C0; }
+          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
+          th { background: #f1f5f9; text-align: left; padding: 10px; border-bottom: 2px solid #cbd5e1; }
+          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
+          @page { size: A4 portrait; margin: 20mm; }
+          @media print { .hint { display: none; } }
+        </style>
+      </head>
+      <body>
+        <div class="hint" style="background:#e0f2fe; padding:10px; margin-bottom:20px; text-align:center; color:#0369a1; border-radius:6px; font-size:13px;">
+          💡 To save as PDF: Choose "Save as PDF" in the print dialog.
+        </div>
+        <div class="header">
+          <h1>LaundryHub Orders Report</h1>
+          <p>Generated on ${new Date().toLocaleDateString()}</p>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>Order ID</th>
+              <th>Customer</th>
+              <th>Service</th>
+              <th>Weight</th>
+              <th>Total</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${rowsHtml}
+          </tbody>
+        </table>
+      </body>
+    </html>
+  `);
+
+  win.document.close();
+  win.onload = () => {
+    win.focus();
+    win.print();
+  };
+}
+
+// Initialize the new report buttons
+document.addEventListener('DOMContentLoaded', () => {
+  const btnCsv = document.getElementById('btn-download-csv');
+  const btnPdf = document.getElementById('btn-download-pdf');
+  
+  if (btnCsv) btnCsv.addEventListener('click', downloadCSVReport);
+  if (btnPdf) btnPdf.addEventListener('click', downloadPDFReport);
+});
+
