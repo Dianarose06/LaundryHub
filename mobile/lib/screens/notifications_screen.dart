@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import '../services/profile_service.dart';
 import '../models/profile_model.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
   const NotificationsScreen({Key? key}) : super(key: key);
@@ -180,7 +181,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget _buildNotificationHeader() {
     return Card(
       elevation: 0,
-      color: const Color(0xFFF5F5F5),
+      color: LaundryHubColors.surfaceNeutral,
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -216,7 +217,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onChanged: _isUpdating
                         ? null
                         : _updateMainNotificationSettings,
-                    activeColor: const Color(0xFF1565C0),
+                    activeColor: LaundryHubColors.primary,
                   ),
                 ),
               ],
@@ -242,14 +243,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
           side: const BorderSide(
-            color: Color(0xFFE0E0E0),
+            color: LaundryHubColors.borderNeutral,
             width: 1,
           ),
         ),
         child: ListTile(
           leading: Icon(
             icon,
-            color: enabled ? const Color(0xFF1565C0) : Colors.grey,
+            color: enabled ? LaundryHubColors.primary : Colors.grey,
           ),
           title: Text(title),
           subtitle: Text(subtitle),
@@ -257,7 +258,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? Switch(
                   value: enabled,
                   onChanged: onChanged,
-                  activeColor: const Color(0xFF1565C0),
+                  activeColor: LaundryHubColors.primary,
                 )
               : Icon(
                   enabled ? Icons.check : Icons.close,
@@ -285,7 +286,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE0E0E0)),
+            side: const BorderSide(color: LaundryHubColors.borderNeutral),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -296,7 +297,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                   children: [
                     const Icon(
                       Icons.email_outlined,
-                      color: Color(0xFF1565C0),
+                      color: LaundryHubColors.primary,
                     ),
                     const SizedBox(width: 12),
                     FutureBuilder<CustomerProfile>(
@@ -379,7 +380,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           color: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFE0E0E0)),
+            side: const BorderSide(color: LaundryHubColors.borderNeutral),
           ),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -417,10 +418,10 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         const SizedBox(height: 16),
         Card(
           elevation: 0,
-          color: const Color(0xFFFFF3E0),
+          color: LaundryHubColors.warningSoftAlt,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
-            side: const BorderSide(color: Color(0xFFFFB74D)),
+            side: const BorderSide(color: LaundryHubColors.warningOrangeBorder),
           ),
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -428,7 +429,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               children: const [
                 Icon(
                   Icons.info_outline,
-                  color: Color(0xFFF57C00),
+                  color: LaundryHubColors.warningOrange,
                   size: 20,
                 ),
                 SizedBox(width: 12),
@@ -437,7 +438,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     'Disable notifications only if you prefer not to receive emails. You can always check your order status in the app.',
                     style: TextStyle(
                       fontSize: 13,
-                      color: Color(0xFFF57C00),
+                      color: LaundryHubColors.warningOrange,
                     ),
                   ),
                 ),
@@ -487,3 +488,5 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
+
+

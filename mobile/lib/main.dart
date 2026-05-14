@@ -1,10 +1,12 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/edit_profile_screen.dart';
 import 'services/auth_service.dart';
 import 'models/profile_model.dart';
+import 'theme/laundryhub_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,10 +32,7 @@ class LaundryHubApp extends StatelessWidget {
     return MaterialApp(
       title: 'LaundryHub',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        useMaterial3: true,
-      ),
+      theme: LaundryHubTheme.light(),
       home: const _SplashGate(),
       onGenerateRoute: (settings) {
         if (settings.name == '/edit-profile') {
@@ -64,13 +63,12 @@ class _SplashGateState extends State<_SplashGate> {
   }
 
   Future<void> _checkAuth() async {
-    final token = await AuthService.getToken();
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('auth_token');
     if (!mounted) return;
-
     if (token != null && token.isNotEmpty) {
       final role = await AuthService.getRole();
       if (!mounted) return;
-
       if (role == 'admin') {
         await AuthService.logout();
         if (!mounted) return;
@@ -96,7 +94,7 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   Widget build(BuildContext context) {
     return const Scaffold(
-      backgroundColor: Color(0xFF1565C0),
+      backgroundColor: LaundryHubColors.primary,
       body: Center(
         child: Column(
           mainAxisSize: MainAxisSize.min,

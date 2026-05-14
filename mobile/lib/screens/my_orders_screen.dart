@@ -1,23 +1,24 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/order_service.dart';
 import '../services/service_service.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 // ignore_for_file: constant_identifier_names
 class _M {
-  static const primary     = Color(0xFF2563EB);
-  static const primaryPale = Color(0xFFEFF6FF);
-  static const navy        = Color(0xFF0F172A);
-  static const slate       = Color(0xFF334155);
-  static const muted       = Color(0xFF94A3B8);
-  static const border      = Color(0xFFE2E8F0);
-  static const surface     = Color(0xFFF8FAFC);
-  static const green       = Color(0xFF10B981);
-  static const greenLight  = Color(0xFFECFDF5);
-  static const amber       = Color(0xFFF59E0B);
-  static const amberLight  = Color(0xFFFFFBEB);
-  static const red         = Color(0xFFEF4444);
-  static const redLight    = Color(0xFFFEF2F2);
+  static const primary     = LaundryHubColors.primaryVivid;
+  static const primaryPale = LaundryHubColors.primaryPale;
+  static const navy        = LaundryHubColors.textPrimary;
+  static const slate       = LaundryHubColors.textSecondary;
+  static const muted       = LaundryHubColors.textSubtle;
+  static const border      = LaundryHubColors.borderSoft;
+  static const surface     = LaundryHubColors.surfaceSoft;
+  static const green       = LaundryHubColors.success;
+  static const greenLight  = LaundryHubColors.successSoft;
+  static const amber       = LaundryHubColors.warning;
+  static const amberLight  = LaundryHubColors.warningSoft;
+  static const red         = LaundryHubColors.errorStrong;
+  static const redLight    = LaundryHubColors.errorSoft;
 }
 
 class MyOrdersScreen extends StatefulWidget {
@@ -28,15 +29,17 @@ class MyOrdersScreen extends StatefulWidget {
 }
 
 class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObserver {
+    // Removed emoji mapping - using ServiceService.getServiceIcon() instead
+    String _getServiceEmoji(String serviceType) {
+      // This method is kept for backward compatibility but returns empty string
+      // Icons are now displayed using Material Design icons
+      return '';
+    }
   List<dynamic> _orders = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _activeFilter = 'all';
-  bool _deliveryCanBeHigher = true;
-  String _pickupAppliesWhen = 'delivery_type is pickup';
-  String _deliveryAppliesWhen = 'always';
-  String _logisticsReason =
-      'Delivery includes route planning, customer handoff coordination, and possible wait time.';
+  AppLifecycleState? _lastLifecycleState;
 
   @override
   void initState() {
@@ -53,6 +56,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
+    _lastLifecycleState = state;
     // Refresh orders when app comes back to foreground
     if (state == AppLifecycleState.resumed) {
       debugPrint('App resumed - refreshing customer orders on MyOrdersScreen');
@@ -71,94 +75,16 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     if (!mounted) return;
 
     if (result['success'] == true) {
-      final rawMeta = result['meta'];
-      final meta = rawMeta is Map
-        ? Map<String, dynamic>.from(rawMeta)
-        : const <String, dynamic>{};
-      final rawExplanation = meta['logistics_fee_explanation'];
-      final explanation = rawExplanation is Map
-        ? Map<String, dynamic>.from(rawExplanation)
-        : const <String, dynamic>{};
-
       setState(() {
         _orders = result['data'] as List<dynamic>;
-      final deliveryCanBeHigher = explanation['delivery_can_be_higher'];
-      _deliveryCanBeHigher =
-        deliveryCanBeHigher is bool ? deliveryCanBeHigher : true;
-
-      final pickupAppliesWhen =
-        explanation['pickup_applies_when']?.toString().trim();
-      _pickupAppliesWhen =
-        (pickupAppliesWhen != null && pickupAppliesWhen.isNotEmpty)
-          ? pickupAppliesWhen
-          : 'delivery_type is pickup';
-
-      final deliveryAppliesWhen =
-        explanation['delivery_applies_when']?.toString().trim();
-      _deliveryAppliesWhen =
-        (deliveryAppliesWhen != null && deliveryAppliesWhen.isNotEmpty)
-          ? deliveryAppliesWhen
-          : 'always';
-
-      final logisticsReason = explanation['reason']?.toString().trim();
-      _logisticsReason =
-        (logisticsReason != null && logisticsReason.isNotEmpty)
-          ? logisticsReason
-          : 'Delivery includes route planning, customer handoff coordination, and possible wait time.';
-
         _isLoading = false;
       });
     } else {
       setState(() {
-        _errorMessage = _safeOrdersErrorMessage(result['message']?.toString());
+        _errorMessage = result['message']?.toString();
         _isLoading = false;
       });
     }
-  }
-
-  String _safeOrdersErrorMessage(String? rawMessage) {
-    if (rawMessage == null || rawMessage.trim().isEmpty) {
-      return 'Unable to load your orders right now. Please try again.';
-    }
-
-    final normalized = rawMessage.toLowerCase();
-    if (normalized.contains('sqlstate') ||
-        normalized.contains('base table') ||
-        normalized.contains('exception') ||
-        normalized.contains('stack trace')) {
-      return 'Unable to load your orders right now. Please try again.';
-    }
-
-    if (rawMessage.length > 150) {
-      return '${rawMessage.substring(0, 147)}...';
-    }
-
-    return rawMessage;
-  }
-
-  String get _pickupFeeRuleLabel {
-    final normalized = _pickupAppliesWhen.trim().toLowerCase();
-    if (normalized == 'delivery_type is pickup') {
-      return 'applies only when you choose Pickup';
-    }
-
-    return _pickupAppliesWhen;
-  }
-
-  String get _deliveryFeeRuleLabel {
-    final normalized = _deliveryAppliesWhen.trim().toLowerCase();
-    if (normalized == 'always') {
-      return 'always applied';
-    }
-
-    return _deliveryAppliesWhen;
-  }
-
-  String get _logisticsReasonText {
-    final reason = _logisticsReason.trim();
-    return reason.isEmpty
-        ? 'Delivery includes route planning, customer handoff coordination, and possible wait time.'
-        : reason;
   }
 
   String _getStatusColor(String status) {
@@ -220,7 +146,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           })
           .join('-');
     } else {
-      // For space-separated services like "Soft Wash", "Basic Dry Cleaning"
+      // For space-separated services like "Soft Wash", "Dry Cleaning"
       return cleaned
           .split(' ')
           .map((part) {
@@ -230,39 +156,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           })
           .join(' ');
     }
-  }
-
-  String _orderBarangayLabel(Map<String, dynamic> order) {
-    final raw = order['pickup_barangay'];
-    final fromApi = raw?.toString().trim() ?? '';
-    if (fromApi.isNotEmpty) {
-      return fromApi;
-    }
-
-    final address = order['pickup_address']?.toString() ?? '';
-    if (address.contains(',')) {
-      final parts = address.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty).toList();
-      if (parts.length >= 2) {
-        return parts[parts.length - 2];
-      }
-    }
-
-    return 'N/A';
-  }
-
-  String _orderPickupAddressLabel(Map<String, dynamic> order) {
-    final address = (order['pickup_address'] ?? '').toString().trim();
-    final barangay = _orderBarangayLabel(order);
-    final city = (order['pickup_city'] ?? '').toString().trim();
-
-    if (address.isEmpty) {
-      if (barangay != 'N/A' && barangay.isNotEmpty && city.isNotEmpty) {
-        return '$barangay, $city';
-      }
-      return 'N/A';
-    }
-
-    return address;
   }
 
   //  Design-system status helpers 
@@ -310,7 +203,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
         if (status.toLowerCase() == 'completed')
           const Padding(
             padding: EdgeInsets.only(right: 4),
-            child: Text('✓', style: TextStyle(
+            child: Text('?', style: TextStyle(
               fontSize: 11, fontWeight: FontWeight.w600, color: _M.green)),
           ),
         Text(
@@ -448,16 +341,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
             children: [
               Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
               const SizedBox(height: 16),
-              Text(
-                _errorMessage!,
-                textAlign: TextAlign.center,
-                maxLines: 4,
-                overflow: TextOverflow.ellipsis,
+              Text(_errorMessage!, textAlign: TextAlign.center,
                 style: GoogleFonts.dmSans(
-                  fontSize: 15,
-                  color: Colors.grey.shade600,
-                ),
-              ),
+                  fontSize: 16, color: Colors.grey.shade600)),
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: _loadOrders,
@@ -550,7 +436,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _M.border, width: 1.5),
           boxShadow: [BoxShadow(
-            color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+            color: LaundryHubColors.textPrimary.withOpacity(0.05),
             blurRadius: 12, offset: const Offset(0, 3))],
         ),
         child: Padding(
@@ -598,17 +484,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                         ? Icons.directions_walk_outlined
                         : Icons.two_wheeler_outlined,
                     order['delivery_type'] == 'delivery' ? 'Drop-off' : 'Pickup'),
-                ],
-              ),
-              const SizedBox(height: 10),
-              Row(
-                children: [
-                  Expanded(
-                    child: _infoItem(
-                      Icons.map_outlined,
-                      _orderBarangayLabel(order),
-                    ),
-                  ),
                 ],
               ),
 
@@ -726,27 +601,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
   //  Order details bottom sheet 
 
   Future<void> _showOrderDetails(Map<String, dynamic> order) async {
-    final deliveryType =
-      (order['delivery_type'] ?? 'pickup').toString().toLowerCase();
-    final isDropOff = deliveryType == 'delivery';
-    final pickupFee =
-      double.tryParse((order['pickup_fee'] ?? 0).toString()) ?? 0.0;
-    final deliveryFee =
-      double.tryParse((order['delivery_fee'] ?? 0).toString()) ?? 0.0;
-    final totalPrice =
-      double.tryParse((order['total_price'] ?? 0).toString()) ?? 0.0;
-    final feeZone = (order['fee_zone'] ?? 'N/A').toString();
-    final addOnTotal =
-      double.tryParse((order['add_on_total'] ?? 0).toString()) ?? 0.0;
-
-    final rawAddOns = order['add_ons'];
-    final addOns = rawAddOns is List
-        ? rawAddOns
-            .whereType<Map>()
-            .map((m) => Map<String, dynamic>.from(m))
-            .toList()
-        : <Map<String, dynamic>>[];
-
     await showModalBottomSheet(
       context: context,
       isScrollControlled: true,
@@ -781,13 +635,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF1565C0).withValues(alpha: 0.1),
+                      color: LaundryHubColors.primary.withOpacity(0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
                       ServiceService.getServiceIcon(order['service_type'] ?? ''),
                       size: 28,
-                      color: const Color(0xFF1565C0),
+                      color: LaundryHubColors.primary,
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -800,7 +654,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF0D1B4B),
+                            color: LaundryHubColors.textPrimaryDeep,
                           ),
                         ),
                         Text(
@@ -852,14 +706,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                     const SizedBox(height: 16),
                     _buildDetailRow(
                       'Pickup Address',
-                      _orderPickupAddressLabel(order),
+                      order['pickup_address'] ?? 'N/A',
                       Icons.location_on_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Barangay',
-                      _orderBarangayLabel(order),
-                      Icons.map_outlined,
                     ),
                     const SizedBox(height: 16),
                     _buildDetailRow(
@@ -873,111 +721,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                       _formatDate(order['delivery_date']),
                       Icons.local_shipping_outlined,
                     ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Logistics Zone',
-                      feeZone,
-                      Icons.map_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Pickup Fee',
-                      isDropOff
-                          ? '₱ 0.00 (Drop-off selected)'
-                          : '₱ ${pickupFee.toStringAsFixed(2)}',
-                      Icons.two_wheeler_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Delivery Fee',
-                      '₱ ${deliveryFee.toStringAsFixed(2)}',
-                      Icons.local_shipping_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    if (addOns.isNotEmpty) ...[
-                      _buildDetailRow(
-                        'Add-ons Total',
-                        '₱ ${addOnTotal.toStringAsFixed(2)}',
-                        Icons.add_circle_outline,
-                      ),
-                      const SizedBox(height: 8),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(12),
-                        decoration: BoxDecoration(
-                          color: _M.surface,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: _M.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Selected add-ons',
-                              style: GoogleFonts.dmSans(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: _M.navy,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            ...addOns.map((addOn) {
-                              final name =
-                                  (addOn['name'] ?? 'Add-on').toString();
-                              final fee = double.tryParse(
-                                      (addOn['fee'] ?? 0).toString()) ??
-                                  0.0;
-                              return Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(vertical: 4),
-                                child: Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.check_circle_outline,
-                                      size: 16,
-                                      color: _M.primary,
-                                    ),
-                                    const SizedBox(width: 10),
-                                    Expanded(
-                                      child: Text(
-                                        name,
-                                        style: GoogleFonts.dmSans(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w600,
-                                          color: _M.slate,
-                                        ),
-                                      ),
-                                    ),
-                                    Text(
-                                      '₱ ${fee.toStringAsFixed(2)}',
-                                      style: GoogleFonts.dmSans(
-                                        fontSize: 12,
-                                        fontWeight: FontWeight.w700,
-                                        color: _M.primary,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            }),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(height: 16),
-                    ],
-                    _buildDetailRow(
-                      'Total Price',
-                      '₱ ${totalPrice.toStringAsFixed(2)}',
-                      Icons.receipt_long_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildDetailRow(
-                      'Payment Method',
-                      'Cash on Delivery (COD)',
-                      Icons.payments_outlined,
-                    ),
-                    const SizedBox(height: 16),
-                    _buildLogisticsExplanationCard(),
                     if (order['special_instructions'] != null &&
                         order['special_instructions'].toString().isNotEmpty) ...[
                       const SizedBox(height: 16),
@@ -1002,7 +745,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 20, color: const Color(0xFF1565C0)),
+        Icon(icon, size: 20, color: LaundryHubColors.primary),
         const SizedBox(width: 12),
         Expanded(
           child: Column(
@@ -1021,7 +764,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                 style: TextStyle(
                   fontSize: 15,
                   fontWeight: FontWeight.w600,
-                  color: valueColor ?? const Color(0xFF0D1B4B),
+                  color: valueColor ?? LaundryHubColors.textPrimaryDeep,
                 ),
               ),
             ],
@@ -1030,58 +773,6 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
       ],
     );
   }
-
-  Widget _buildLogisticsExplanationCard() {
-    final title = _deliveryCanBeHigher
-        ? 'Why delivery may cost more'
-        : 'Logistics fee details';
-
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: _M.surface,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: _M.border),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            title,
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _M.navy,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            _logisticsReasonText,
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              color: _M.slate,
-              height: 1.35,
-            ),
-          ),
-          const SizedBox(height: 6),
-          Text(
-            'Pickup fee: $_pickupFeeRuleLabel',
-            style: GoogleFonts.dmSans(
-              fontSize: 11,
-              color: _M.slate,
-            ),
-          ),
-          const SizedBox(height: 2),
-          Text(
-            'Delivery fee: $_deliveryFeeRuleLabel',
-            style: GoogleFonts.dmSans(
-              fontSize: 11,
-              color: _M.slate,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
 }
+
+

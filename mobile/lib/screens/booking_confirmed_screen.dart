@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'main_shell.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class BookingConfirmedScreen extends StatelessWidget {
   final String orderId;
@@ -13,16 +14,16 @@ class BookingConfirmedScreen extends StatelessWidget {
   });
 
   // Design system colors
-  static const _primary      = Color(0xFF2563EB);
-  static const _primaryLight = Color(0xFF3B82F6);
-  static const _navy         = Color(0xFF0F172A);
-  static const _muted        = Color(0xFF94A3B8);
-  static const _border       = Color(0xFFE2E8F0);
-  static const _surface      = Color(0xFFF8FAFC);
-  static const _green        = Color(0xFF10B981);
-  static const _greenLight   = Color(0xFFECFDF5);
-  static const _amber        = Color(0xFFF59E0B);
-  static const _amberLight   = Color(0xFFFFFBEB);
+  static const _primary      = LaundryHubColors.primaryVivid;
+  static const _primaryLight = LaundryHubColors.primaryVividLight;
+  static const _navy         = LaundryHubColors.textPrimary;
+  static const _muted        = LaundryHubColors.textSubtle;
+  static const _border       = LaundryHubColors.borderSoft;
+  static const _surface      = LaundryHubColors.surfaceSoft;
+  static const _green        = LaundryHubColors.success;
+  static const _greenLight   = LaundryHubColors.successSoft;
+  static const _amber        = LaundryHubColors.warning;
+  static const _amberLight   = LaundryHubColors.warningSoft;
 
   @override
   Widget build(BuildContext context) {
@@ -276,3 +277,5 @@ class BookingConfirmedScreen extends StatelessWidget {
     );
   }
 }
+
+

@@ -5,22 +5,23 @@ import '../services/batch_service.dart';
 import '../services/order_service.dart';
 import '../services/service_service.dart';
 import 'login_screen.dart';
+import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 class _C {
-  static const primary     = Color(0xFF2563EB);
-  static const primaryPale = Color(0xFFEFF6FF);
-  static const navy        = Color(0xFF0F172A);
-  static const slate       = Color(0xFF334155);
-  static const muted       = Color(0xFF94A3B8);
-  static const border      = Color(0xFFE2E8F0);
-  static const surface     = Color(0xFFF8FAFC);
-  static const green       = Color(0xFF10B981);
-  static const greenLight  = Color(0xFFECFDF5);
-  static const amber       = Color(0xFFF59E0B);
-  static const amberLight  = Color(0xFFFFFBEB);
-  static const red         = Color(0xFFEF4444);
-  static const redLight    = Color(0xFFFEF2F2);
+  static const primary     = LaundryHubColors.primaryVivid;
+  static const primaryPale = LaundryHubColors.primaryPale;
+  static const navy        = LaundryHubColors.textPrimary;
+  static const slate       = LaundryHubColors.textSecondary;
+  static const muted       = LaundryHubColors.textSubtle;
+  static const border      = LaundryHubColors.borderSoft;
+  static const surface     = LaundryHubColors.surfaceSoft;
+  static const green       = LaundryHubColors.success;
+  static const greenLight  = LaundryHubColors.successSoft;
+  static const amber       = LaundryHubColors.warning;
+  static const amberLight  = LaundryHubColors.warningSoft;
+  static const red         = LaundryHubColors.errorStrong;
+  static const redLight    = LaundryHubColors.errorSoft;
 }
 
 class HomeScreen extends StatefulWidget {
@@ -342,7 +343,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       width: double.infinity,
       decoration: const BoxDecoration(
         gradient: LinearGradient(
-          colors: [Color(0xFF1E40AF), Color(0xFF2563EB), Color(0xFF3B82F6)],
+          colors: [LaundryHubColors.primaryDeep, LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight],
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
         ),
@@ -475,7 +476,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                           borderRadius: BorderRadius.circular(16),
                           border: Border.all(color: _C.border, width: 1.5),
                           boxShadow: [BoxShadow(
-                            color: const Color(0xFF0F172A).withOpacity(0.05),
+                            color: LaundryHubColors.textPrimary.withOpacity(0.05),
                             blurRadius: 12, offset: const Offset(0, 3))],
                         ),
                         child: Column(
@@ -519,7 +520,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _C.primary, width: 1.5),
             boxShadow: [BoxShadow(
-              color: const Color(0xFF2563EB).withOpacity(0.30),
+              color: LaundryHubColors.primaryVivid.withOpacity(0.30),
               blurRadius: 18, offset: const Offset(0, 6))],
           ),
           padding: const EdgeInsets.all(16),
@@ -628,7 +629,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         color: Colors.white, borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _C.border, width: 1.5),
         boxShadow: [BoxShadow(
-          color: const Color(0xFF0F172A).withOpacity(0.05),
+          color: LaundryHubColors.textPrimary.withOpacity(0.05),
           blurRadius: 12, offset: const Offset(0, 3))],
       ),
       child: Padding(
@@ -669,3 +670,5 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     );
   }
 }
+
+

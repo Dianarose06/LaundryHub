@@ -1,7 +1,9 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../config/api_config.dart';
 import '../services/auth_service.dart';
+import '../theme/laundryhub_theme.dart';
 import 'login_screen.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -258,7 +260,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: LaundryHubColors.pageBackground,
       body: SafeArea(
         child: SingleChildScrollView(
           child: Column(
@@ -270,7 +272,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [Color(0xFF1565C0), Color(0xFF1E88E5)],
+                    colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
                   ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(40),
@@ -292,34 +294,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     Center(
                       child: Column(
                         children: [
-                          Container(
-                            width: 76,
-                            height: 76,
-                            decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.local_laundry_service_rounded,
-                              size: 40,
-                              color: Colors.white,
-                            ),
+                          const SizedBox(height: 30),
+                          SizedBox(
+                            width: 168,
+                            height: 168,
+                            child: _buildBrandLogo(),
                           ),
-                          const SizedBox(height: 12),
-                          const Text(
-                            'LaundryHub',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 26,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
+                          const SizedBox(height: 8),
                           const Text(
                             'Create Your Account',
                             style: TextStyle(
                               color: Colors.white70,
-                              fontSize: 15,
+                              fontSize: 19,
+                              fontWeight: FontWeight.w700,
                             ),
                           ),
                         ],
@@ -355,7 +342,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF1565C0),
+                            color: LaundryHubColors.primary,
                           ),
                           textAlign: TextAlign.center,
                         ),
@@ -510,7 +497,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ? null
                                     : _sendVerificationCode,
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF1565C0),
+                                  backgroundColor: LaundryHubColors.primary,
                                   foregroundColor: Colors.white,
                                   padding: const EdgeInsets.symmetric(
                                     horizontal: 16,
@@ -718,7 +705,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         ElevatedButton(
                           onPressed: _isLoading ? null : _register,
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1565C0),
+                            backgroundColor: LaundryHubColors.primary,
                             foregroundColor: Colors.white,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
@@ -766,7 +753,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
-                          color: Color(0xFF1565C0),
+                          color: LaundryHubColors.primary,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -777,6 +764,19 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildBrandLogo() {
+    final primaryUrl = '${ApiConfig.baseUrl}/images/admin-logo.png';
+
+    return Image.network(
+      primaryUrl,
+      fit: BoxFit.contain,
+      errorBuilder: (_, __, ___) => Image.asset(
+        'assets/images/admin-logo.png',
+        fit: BoxFit.contain,
       ),
     );
   }
