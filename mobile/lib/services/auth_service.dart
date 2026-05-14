@@ -61,10 +61,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -121,10 +121,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -203,10 +203,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -233,10 +233,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -259,10 +259,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -288,10 +288,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -316,10 +316,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }
@@ -351,10 +351,10 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
+    } catch (e) {
       return {
         'success': false,
-        'message': 'Connection error. Please check your network.',
+        'message': 'Error: ${e.toString()}',
       };
     }
   }

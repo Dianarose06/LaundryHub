@@ -1,4 +1,4 @@
-﻿import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
@@ -1459,14 +1459,41 @@ class _OrderScreenState extends State<OrderScreen> {
               color: _K.navy,
             ),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
+
+          // Service Area Notice
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade50,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.blue.shade100, width: 1),
+            ),
+            child: Row(
+              children: [
+                Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'We currently serve select areas in Tacloban City only. Please select your barangay below.',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w500,
+                      color: Colors.blue.shade900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
 
           TextFormField(
             initialValue: _K.taclobanCity,
             readOnly: true,
             style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
             decoration: InputDecoration(
-              labelText: 'City (Auto)',
+              labelText: 'City (Fixed Service Area)',
               labelStyle: GoogleFonts.dmSans(fontSize: 12, color: _K.muted),
               prefixIcon: const Icon(
                 Icons.location_city_outlined,
@@ -1602,7 +1629,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     return DropdownMenuItem<int>(
                       value: barangay['id'] as int,
                       child: Text(
-                        '$label ($zoneLabel)',
+                        label,
                         overflow: TextOverflow.ellipsis,
                         style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
                       ),
@@ -1659,11 +1686,7 @@ class _OrderScreenState extends State<OrderScreen> {
                       color: _K.slate,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Zoned from shop at $_barangaysBasePoint',
-                    style: GoogleFonts.dmSans(fontSize: 11, color: _K.muted),
-                  ),
+
                   const SizedBox(height: 8),
                   _buildLogisticsExplanationCard(compact: true),
                 ],
@@ -1678,8 +1701,10 @@ class _OrderScreenState extends State<OrderScreen> {
             maxLines: 2,
             style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
             decoration: InputDecoration(
+              labelText: 'House No. / Street / Landmark',
+              labelStyle: GoogleFonts.dmSans(fontSize: 12, color: _K.muted),
               hintText:
-                  'House no., street, landmark (include sub-brgy like 59-A if needed)',
+                  'e.g., House 123, Green Street, near Alpha Gym',
               hintStyle: GoogleFonts.dmSans(fontSize: 13, color: _K.muted),
               prefixIcon: const Padding(
                 padding: EdgeInsets.only(bottom: 20),
@@ -1723,7 +1748,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    'Pickup Address Preview',
+                    'Full Address Preview (No GPS)',
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
@@ -2135,8 +2160,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 _summaryDivider(),
                 _summaryRow('PICKUP ADDRESS', displayPickupAddress),
                 _summaryDivider(),
-                _summaryRow('LOGISTICS ZONE', _feeZoneLabel),
-                _summaryDivider(),
+
                 _summaryRow('WEIGHT', '${_estimatedKg.toStringAsFixed(1)} kg'),
                 _summaryDivider(),
                 _summaryRow(

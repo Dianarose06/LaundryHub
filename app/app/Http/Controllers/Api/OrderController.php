@@ -52,8 +52,8 @@ class OrderController extends Controller
         $deliveryFee = $baseDeliveryFee;
 
         $feeZone = $barangay
-            ? 'Zone '.((int) $barangay->zone)
-            : 'Default';
+            ? (string) $barangay->zone
+            : '0';
 
         return [
             'pickup_fee' => round($pickupFee, 2),
