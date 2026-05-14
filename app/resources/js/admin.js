@@ -41,6 +41,10 @@ const viewTitles = {
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
 const apiBaseUrl = `${window.LAUNDRYHUB_API_BASE_URL || '/api'}`.replace(/\/$/, '');
+// Ensure we use a relative path if possible to avoid CORS/port issues on localhost
+const safeApiBaseUrl = apiBaseUrl.startsWith('http') && apiBaseUrl.includes(window.location.host) 
+  ? apiBaseUrl.substring(apiBaseUrl.indexOf('/api')) 
+  : apiBaseUrl;
 
 function setText(target, value) {
   const el = typeof target === 'string' ? qs(target) : target;
@@ -367,7 +371,7 @@ async function apiRequest(path, options = {}) {
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${path}`, config);
+    const response = await fetch(`${safeApiBaseUrl}${path}`, config);
     if (timeoutId) clearTimeout(timeoutId);
     let data = null;
     try {
@@ -457,7 +461,8 @@ async function handleLogin(event) {
       timeoutMs: 45000,
     });
     if (!res.ok) {
-      setText(errorBox, res.data?.message || 'Login failed.');
+      const errorMsg = res.data?.message || `Login failed (Status: ${res.status || 'Unknown'})`;
+      setText(errorBox, errorMsg);
       show(errorBox);
       return;
     }
@@ -470,7 +475,9 @@ async function handleLogin(event) {
       res.data?.data?.access_token ||
       ''
     }`.trim();
-    const role = normalizeRole(user?.role);
+
+    // Support both user.role and top-level role field
+    const role = normalizeRole(user?.role || res.data?.role || res.data?.data?.role);
 
     if (!token) {
       setText(errorBox, 'Login failed. Missing access token.');
@@ -484,7 +491,10 @@ async function handleLogin(event) {
       return;
     }
 
-    setSession(token, user);
+    // Ensure we have a valid user object for state
+    const sessionUser = user || { role: 'admin', email: email };
+
+    setSession(token, sessionUser);
     shouldRedirect = true;
     window.location.assign('/admin/dashboard');
   } finally {
@@ -1979,62 +1989,4 @@ function printCodReceipt() {
     win.focus();
     win.print();
   };
-}
-
-    return;
-  }
-
-  win.document.write(`
-    <!DOCTYPE html>
-    <html lang="en">
-      <head>
-        <meta charset="utf-8" />
-        <title>COD Receipt</title>
-        <style>
-          * { box-sizing: border-box; margin: 0; padding: 0; }
-          body {
-            font-family: 'Segoe UI', Arial, sans-serif;
-            color: #08213D;
-            background: #fff;
-            padding: 0;
-          }
-          .receipt-wrap { max-width: 480px; margin: 0 auto; padding-bottom: 24px; }
-          .receipt-header {
-            background: linear-gradient(135deg,#1565C0,#0D47A1);
-            padding: 24px; text-align: center; color: #fff;
-          }
-          .receipt-header .brand { font-size: 10px; letter-spacing: 0.2em; text-transform: uppercase; opacity: 0.65; margin-bottom: 6px; }
-          .receipt-header .title { font-size: 22px; font-weight: 800; letter-spacing: -0.5px; margin-bottom: 6px; }
-          .receipt-header .order-id { display: inline-block; background: rgba(255,255,255,0.15); border-radius: 20px; padding: 2px 14px; font-size: 12px; font-weight: 700; }
-          .receipt-header .date { margin-top: 5px; font-size: 11px; opacity: 0.55; }
-          table { width: 100%; border-collapse: collapse; }
-          td { padding: 9px 16px; font-size: 13px; vertical-align: middle; }
-          .section-head td { padding: 7px 16px; font-size: 10px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; background: #F8FBFF; }
-          .label-col { color: #58708D; font-weight: 500; width: 42%; }
-          .value-col { color: #08213D; font-weight: 600; }
-          .total-box { margin: 16px; background: linear-gradient(135deg,#EEF4FF,#E8F0FE); border: 1px solid rgba(21,101,192,0.18); border-radius: 10px; padding: 16px 20px; display: flex; align-items: center; justify-content: space-between; }
-          .total-label { font-size: 10px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: #58708D; margin-bottom: 3px; }
-          .total-amount { font-size: 26px; font-weight: 800; color: #1565C0; }
-          .cod-box { margin: 0 16px 20px; background: linear-gradient(135deg,#E8F5E9,#F1F8E9); border: 1px solid rgba(46,125,50,0.20); border-radius: 10px; padding: 14px 16px; display: flex; align-items: center; gap: 12px; }
-          .cod-icon { width: 36px; height: 36px; border-radius: 50%; background: #2E7D32; color: #fff; font-size: 18px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
-          .cod-title { font-size: 13px; font-weight: 700; color: #1B5E20; margin-bottom: 2px; }
-          .cod-sub { font-size: 11px; color: #388E3C; line-height: 1.4; }
-          .footer { text-align: center; font-size: 10px; color: #9CA3AF; margin-top: 20px; padding-top: 12px; border-top: 1px solid #e5e7eb; }
-          @media print {
-            body { print-color-adjust: exact; -webkit-print-color-adjust: exact; }
-          }
-        </style>
-      </head>
-      <body>
-        <div class="receipt-wrap">
-          ${printArea.innerHTML}
-          <div class="footer">© 2026 LaundryHub · Cash on Delivery Receipt · Keep this for your records.</div>
-        </div>
-      </body>
-    </html>
-  `);
-
-  win.document.close();
-  win.focus();
-  setTimeout(() => win.print(), 400);
 }

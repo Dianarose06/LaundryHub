@@ -769,15 +769,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildBrandLogo() {
-    final primaryUrl = '${ApiConfig.baseUrl}/images/admin-logo.png';
-
-    return Image.network(
-      primaryUrl,
+    return Image.asset(
+      'assets/images/logo.png',
       fit: BoxFit.contain,
-      errorBuilder: (_, __, ___) => Image.asset(
-        'assets/images/admin-logo.png',
-        fit: BoxFit.contain,
-      ),
     );
   }
 }

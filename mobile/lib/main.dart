@@ -1,6 +1,6 @@
+import 'dart:async';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 import 'screens/login_screen.dart';
 import 'screens/main_shell.dart';
 import 'screens/edit_profile_screen.dart';
@@ -33,7 +33,7 @@ class LaundryHubApp extends StatelessWidget {
       title: 'LaundryHub',
       debugShowCheckedModeBanner: false,
       theme: LaundryHubTheme.light(),
-      home: const _SplashGate(),
+      home: _SplashGate(),
       onGenerateRoute: (settings) {
         if (settings.name == '/edit-profile') {
           final args = settings.arguments as CustomerProfile?;
@@ -49,7 +49,7 @@ class LaundryHubApp extends StatelessWidget {
 }
 
 class _SplashGate extends StatefulWidget {
-  const _SplashGate();
+  _SplashGate();
 
   @override
   State<_SplashGate> createState() => _SplashGateState();
@@ -59,16 +59,18 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    Timer(const Duration(seconds: 4), _checkAuth);
   }
 
   Future<void> _checkAuth() async {
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString('auth_token');
+    final token = await AuthService.getToken();
+    final user = await AuthService.getUser();
+
     if (!mounted) return;
-    if (token != null && token.isNotEmpty) {
-      final role = await AuthService.getRole();
-      if (!mounted) return;
+
+    if (token != null && user != null) {
+      final role = user['role']?.toString().toLowerCase() ?? 'user';
+
       if (role == 'admin') {
         await AuthService.logout();
         if (!mounted) return;
@@ -93,28 +95,23 @@ class _SplashGateState extends State<_SplashGate> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
       backgroundColor: LaundryHubColors.primary,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_laundry_service_rounded,
-              size: 80,
-              color: Colors.white,
-            ),
-            SizedBox(height: 16),
-            Text(
-              'LaundryHub',
-              style: TextStyle(
+        child: SizedBox(
+          width: 250,
+          height: 250,
+          child: Image.asset(
+            'assets/images/logo.png',
+            fit: BoxFit.contain,
+            errorBuilder: (context, error, stackTrace) {
+              return const Icon(
+                Icons.broken_image,
+                size: 100,
                 color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
-            ),
-          ],
+              );
+            },
+          ),
         ),
       ),
     );

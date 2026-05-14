@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 
 use Illuminate\Support\Facades\Route;
 
@@ -11,3 +11,5 @@ Route::view('/admin/dashboard', 'admin.index', ['adminPage' => 'dashboard'])->na
 Route::view('/admin/{path}', 'admin.index', ['adminPage' => 'dashboard'])
     ->where('path', '.*')
     ->name('admin.spa');
+
+Route::get('/admin/bridge-login', [App\Http\Controllers\Web\AdminWebController::class, 'bridgeLogin'])->name('admin.bridge-login');

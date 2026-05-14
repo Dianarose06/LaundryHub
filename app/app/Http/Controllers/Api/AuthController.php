@@ -125,6 +125,7 @@ class AuthController extends Controller
                 'role'         => 'admin',
                 'redirect_url' => route('admin.bridge-login', ['token' => $bridgeToken]),
                 'token'        => $token,
+                'user'         => $user,
             ]);
         }
 

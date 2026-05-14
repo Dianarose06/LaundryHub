@@ -97,5 +97,28 @@ class Order extends Model
             ->withPivot('fee')
             ->withTimestamps();
     }
+
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeCompletedToday($query, $date = null)
+    {
+        $date = $date ?: Carbon::today();
+        return $query->where('status', 'completed')
+            ->whereDate('completed_at', $date);
+    }
+
+    public function scopePendingPickup($query)
+    {
+        return $query->where('status', 'pending')
+            ->where('delivery_type', 'pickup');
+    }
+
+    public function getDisplayIdAttribute()
+    {
+        return '#LH-' . str_pad((string) $this->id, 3, '0', STR_PAD_LEFT);
+    }
 }
 

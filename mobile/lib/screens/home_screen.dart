@@ -254,10 +254,6 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   String _fmtServiceName(String s) => s;
 
-  // Removed - using ServiceService.getServiceIcon() instead
-  @deprecated
-  String _serviceEmoji(String t) => '';
-
   String _fmtOrderDate(String? d) {
     if (d == null) return 'N/A';
     try {
@@ -530,8 +526,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  Text(orderId, style: GoogleFonts.outfit(
-                    fontSize: 13, fontWeight: FontWeight.w800, color: _C.primary)),
+                  Row(
+                    children: [
+                      Icon(ServiceService.getServiceIcon(order['service_type'] ?? ''), 
+                           size: 18, color: _C.primary),
+                      const SizedBox(width: 8),
+                      Text(orderId, style: GoogleFonts.outfit(
+                        fontSize: 13, fontWeight: FontWeight.w800, color: _C.primary)),
+                    ],
+                  ),
                   _statusBadge(status),
                 ],
               ),
@@ -615,9 +618,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   Widget _buildRecentOrderTile(Map<String, dynamic> order) {
     final status = (order['status'] ?? '').toString().toLowerCase();
-    final emoji  = _serviceEmoji(order['service_type'] ?? '');
-    final id     = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
     final name   = _fmtServiceName(order['service_type'] ?? '');
+    final icon   = ServiceService.getServiceIcon(name);
+    final id     = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
     final date   = _fmtOrderDate(order['pickup_date'] ?? order['created_at']);
     final total  = order['total_price'] != null
         ? '₱${double.tryParse(order['total_price'].toString())?.toStringAsFixed(0) ?? '–'}'
@@ -629,7 +632,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
         color: Colors.white, borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _C.border, width: 1.5),
         boxShadow: [BoxShadow(
-          color: LaundryHubColors.textPrimary.withOpacity(0.05),
+          color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
           blurRadius: 12, offset: const Offset(0, 3))],
       ),
       child: Padding(
@@ -640,7 +643,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               width: 42, height: 42,
               decoration: BoxDecoration(
                 color: _C.primaryPale, borderRadius: BorderRadius.circular(12)),
-              child: Center(child: Text(emoji, style: const TextStyle(fontSize: 20))),
+              child: Center(child: Icon(icon, size: 22, color: _C.primary)),
             ),
             const SizedBox(width: 12),
             Expanded(
