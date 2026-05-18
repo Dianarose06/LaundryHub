@@ -14,16 +14,16 @@ class BookingConfirmedScreen extends StatelessWidget {
   });
 
   // Design system colors
-  static const _primary      = LaundryHubColors.primaryVivid;
+  static const _primary = LaundryHubColors.primaryVivid;
   static const _primaryLight = LaundryHubColors.primaryVividLight;
-  static const _navy         = LaundryHubColors.textPrimary;
-  static const _muted        = LaundryHubColors.textSubtle;
-  static const _border       = LaundryHubColors.borderSoft;
-  static const _surface      = LaundryHubColors.surfaceSoft;
-  static const _green        = LaundryHubColors.success;
-  static const _greenLight   = LaundryHubColors.successSoft;
-  static const _amber        = LaundryHubColors.warning;
-  static const _amberLight   = LaundryHubColors.warningSoft;
+  static const _navy = LaundryHubColors.textPrimary;
+  static const _muted = LaundryHubColors.textSubtle;
+  static const _border = LaundryHubColors.borderSoft;
+  static const _surface = LaundryHubColors.surfaceSoft;
+  static const _green = LaundryHubColors.success;
+  static const _greenLight = LaundryHubColors.successSoft;
+  static const _amber = LaundryHubColors.warning;
+  static const _amberLight = LaundryHubColors.warningSoft;
 
   @override
   Widget build(BuildContext context) {
@@ -64,12 +64,7 @@ class BookingConfirmedScreen extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         border: Border.all(color: _green, width: 2),
       ),
-      child: const Center(
-        child: Text(
-          '✅',
-          style: TextStyle(fontSize: 36),
-        ),
-      ),
+      child: const Center(child: Text('✅', style: TextStyle(fontSize: 36))),
     );
   }
 
@@ -91,11 +86,7 @@ class BookingConfirmedScreen extends StatelessWidget {
     return Text(
       'Your booking $orderId has been submitted\nand is awaiting admin approval.',
       textAlign: TextAlign.center,
-      style: GoogleFonts.dmSans(
-        fontSize: 13,
-        color: _muted,
-        height: 1.5,
-      ),
+      style: GoogleFonts.dmSans(fontSize: 13, color: _muted, height: 1.5),
     );
   }
 
@@ -106,9 +97,9 @@ class BookingConfirmedScreen extends StatelessWidget {
         color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: _border, width: 1.5),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x0D0F172A),
+            color: _navy.withValues(alpha: 0.05),
             blurRadius: 10,
             offset: Offset(0, 2),
           ),
@@ -189,7 +180,10 @@ class BookingConfirmedScreen extends StatelessWidget {
                   ),
                 ),
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 3,
+                  ),
                   decoration: BoxDecoration(
                     color: _amberLight,
                     borderRadius: BorderRadius.circular(6),
@@ -222,9 +216,9 @@ class BookingConfirmedScreen extends StatelessWidget {
           end: Alignment.centerRight,
         ),
         borderRadius: BorderRadius.circular(13),
-        boxShadow: const [
+        boxShadow: [
           BoxShadow(
-            color: Color(0x612563EB),
+            color: _primary.withValues(alpha: 0.38),
             blurRadius: 14,
             offset: Offset(0, 4),
           ),
@@ -277,5 +271,3 @@ class BookingConfirmedScreen extends StatelessWidget {
     );
   }
 }
-
-

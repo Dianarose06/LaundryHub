@@ -1,7 +1,6 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import '../config/api_config.dart';
 import '../services/auth_service.dart';
 import '../theme/laundryhub_theme.dart';
 import 'login_screen.dart';
@@ -35,6 +34,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Timer? _timer;
   int _remainingSeconds = 60;
   bool _canResend = false;
+  String _lastVerificationEmail = '';
 
   @override
   void dispose() {
@@ -82,7 +82,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter a valid email address'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -104,12 +104,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (result['success'] == true) {
       setState(() {
         _codeSent = true;
+        _lastVerificationEmail = _emailController.text.trim().toLowerCase();
       });
       _startTimer();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Code sent to your email'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -124,7 +125,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to send code'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -141,7 +142,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter all 6 digits'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -161,6 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
     if (result['success'] == true) {
       setState(() {
         _emailVerified = true;
+        _lastVerificationEmail = _emailController.text.trim().toLowerCase();
       });
       _timer?.cancel();
       ScaffoldMessenger.of(context).showSnackBar(
@@ -172,7 +174,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
               Text('Email verified successfully!'),
             ],
           ),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -183,7 +185,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Invalid code'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -200,7 +202,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please verify your email first'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -228,7 +230,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Registration successful! You can now login.'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -247,7 +249,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Registration failed'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -272,7 +274,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   gradient: LinearGradient(
                     begin: Alignment.topLeft,
                     end: Alignment.bottomRight,
-                    colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
+                    colors: [
+                      LaundryHubColors.primary,
+                      LaundryHubColors.primaryLight,
+                    ],
                   ),
                   borderRadius: BorderRadius.only(
                     bottomLeft: Radius.circular(40),
@@ -325,7 +330,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.blue.shade100.withValues(alpha: 0.5),
+                        color: LaundryHubColors.primarySoftBorder.withValues(
+                          alpha: 0.5,
+                        ),
                         blurRadius: 20,
                         offset: const Offset(0, 10),
                       ),
@@ -349,7 +356,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 8),
                         const Text(
                           'Fill in the details below to create your account',
-                          style: TextStyle(fontSize: 14, color: Colors.grey),
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: LaundryHubColors.textSubtle,
+                          ),
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
@@ -369,7 +379,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: LaundryHubColors.pageBackground,
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
@@ -391,7 +401,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: LaundryHubColors.pageBackground,
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
@@ -416,7 +426,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
-                                  fillColor: Colors.grey.shade50,
+                                  fillColor: LaundryHubColors.pageBackground,
                                 ),
                                 inputFormatters: [
                                   FilteringTextInputFormatter.allow(
@@ -462,13 +472,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                 controller: _emailController,
                                 keyboardType: TextInputType.emailAddress,
                                 enabled: !_emailVerified,
+                                onChanged: (value) {
+                                  final normalized = value.trim().toLowerCase();
+                                  if (normalized == _lastVerificationEmail) {
+                                    return;
+                                  }
+
+                                  if (_emailVerified || _codeSent) {
+                                    setState(() {
+                                      _emailVerified = false;
+                                      _codeSent = false;
+                                      _canResend = false;
+                                      _remainingSeconds = 60;
+                                    });
+                                    _timer?.cancel();
+                                    for (final c in _codeControllers) {
+                                      c.clear();
+                                    }
+                                  }
+                                },
                                 decoration: InputDecoration(
                                   labelText: 'Email Address',
                                   prefixIcon: const Icon(Icons.email_outlined),
                                   suffixIcon: _emailVerified
                                       ? const Icon(
                                           Icons.check_circle,
-                                          color: Colors.green,
+                                          color: LaundryHubColors.success,
                                         )
                                       : null,
                                   border: OutlineInputBorder(
@@ -476,8 +505,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   ),
                                   filled: true,
                                   fillColor: _emailVerified
-                                      ? Colors.green.shade50
-                                      : Colors.grey.shade50,
+                                      ? LaundryHubColors.successPale
+                                      : LaundryHubColors.pageBackground,
                                 ),
                                 validator: (value) {
                                   if (value == null || value.isEmpty) {
@@ -529,7 +558,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         if (_codeSent && !_emailVerified) ...[
                           const Text(
                             'Enter the 6-digit code sent to your email',
-                            style: TextStyle(fontSize: 13, color: Colors.grey),
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: LaundryHubColors.textSubtle,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           Row(
@@ -553,7 +585,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                       borderRadius: BorderRadius.circular(8),
                                     ),
                                     filled: true,
-                                    fillColor: Colors.grey.shade100,
+                                    fillColor: LaundryHubColors.surfaceNeutral,
                                   ),
                                   inputFormatters: [
                                     FilteringTextInputFormatter.digitsOnly,
@@ -584,14 +616,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     const Icon(
                                       Icons.timer,
                                       size: 16,
-                                      color: Colors.grey,
+                                      color: LaundryHubColors.textSubtle,
                                     ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Resend in $_remainingSeconds s',
                                       style: const TextStyle(
                                         fontSize: 12,
-                                        color: Colors.grey,
+                                        color: LaundryHubColors.textSubtle,
                                       ),
                                     ),
                                   ],
@@ -621,7 +653,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: LaundryHubColors.pageBackground,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -649,7 +681,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: LaundryHubColors.pageBackground,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -687,7 +719,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: Colors.grey.shade50,
+                            fillColor: LaundryHubColors.pageBackground,
                           ),
                           validator: (value) {
                             if (value == null || value.isEmpty) {
@@ -746,7 +778,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   children: [
                     const Text(
                       'Already have an account? ',
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: LaundryHubColors.textSubtle),
                     ),
                     TextButton(
                       onPressed: () => Navigator.pop(context),
@@ -769,9 +801,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildBrandLogo() {
-    return Image.asset(
-      'assets/images/logo.png',
-      fit: BoxFit.contain,
-    );
+    return Image.asset('assets/images/logo.png', fit: BoxFit.contain);
   }
 }

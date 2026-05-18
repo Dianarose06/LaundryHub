@@ -5,7 +5,7 @@ import '../models/profile_model.dart';
 import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+  const NotificationsScreen({super.key});
 
   @override
   State<NotificationsScreen> createState() => _NotificationsScreenState();
@@ -49,7 +49,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to load preferences: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -65,19 +65,15 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     });
 
     try {
-      await _profileService.updateProfile(
-        notificationsEnabled: value,
-      );
+      await _profileService.updateProfile(notificationsEnabled: value);
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              value
-                  ? 'Notifications enabled'
-                  : 'Notifications disabled',
+              value ? 'Notifications enabled' : 'Notifications disabled',
             ),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
           ),
         );
       }
@@ -87,7 +83,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update settings: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -121,10 +117,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               if (_notificationsEnabled) ...[
                 const Text(
                   'Notification Types',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 8),
                 _buildNotificationTypeCard(
@@ -205,7 +198,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                       'Manage how we contact you',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey,
+                        color: LaundryHubColors.textSubtle,
                       ),
                     ),
                   ],
@@ -217,7 +210,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                     onChanged: _isUpdating
                         ? null
                         : _updateMainNotificationSettings,
-                    activeColor: LaundryHubColors.primary,
+                    activeThumbColor: LaundryHubColors.primary,
                   ),
                 ),
               ],
@@ -250,7 +243,9 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
         child: ListTile(
           leading: Icon(
             icon,
-            color: enabled ? LaundryHubColors.primary : Colors.grey,
+            color: enabled
+                ? LaundryHubColors.primary
+                : LaundryHubColors.textSubtle,
           ),
           title: Text(title),
           subtitle: Text(subtitle),
@@ -258,11 +253,13 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
               ? Switch(
                   value: enabled,
                   onChanged: onChanged,
-                  activeColor: LaundryHubColors.primary,
+                  activeThumbColor: LaundryHubColors.primary,
                 )
               : Icon(
                   enabled ? Icons.check : Icons.close,
-                  color: enabled ? Colors.green : Colors.grey,
+                  color: enabled
+                      ? LaundryHubColors.success
+                      : LaundryHubColors.textSubtle,
                 ),
         ),
       ),
@@ -275,10 +272,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       children: [
         const Text(
           'Email Settings',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Card(
@@ -312,7 +306,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                                   'Email Address',
                                   style: TextStyle(
                                     fontSize: 12,
-                                    color: Colors.grey,
+                                    color: LaundryHubColors.textSubtle,
                                   ),
                                 ),
                                 Text(
@@ -329,9 +323,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                         return const SizedBox(
                           width: 16,
                           height: 16,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2),
                         );
                       },
                     ),
@@ -342,17 +334,14 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 const SizedBox(height: 12),
                 const Text(
                   'Notification Frequency',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w500),
                 ),
                 const SizedBox(height: 8),
                 const Text(
                   'You will receive emails immediately when important events occur on your orders.',
                   style: TextStyle(
                     fontSize: 13,
-                    color: Colors.grey,
+                    color: LaundryHubColors.textSubtle,
                   ),
                 ),
               ],
@@ -369,10 +358,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
       children: [
         const Text(
           'About Notifications',
-          style: TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
         ),
         const SizedBox(height: 12),
         Card(
@@ -459,7 +445,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
           child: Icon(
             Icons.check_circle,
             size: 18,
-            color: Colors.green.shade400,
+            color: LaundryHubColors.successLight,
           ),
         ),
         const SizedBox(width: 12),
@@ -478,7 +464,7 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
                 description,
                 style: const TextStyle(
                   fontSize: 12,
-                  color: Colors.grey,
+                  color: LaundryHubColors.textSubtle,
                 ),
               ),
             ],
@@ -488,5 +474,3 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
     );
   }
 }
-
-

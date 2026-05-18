@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import 'login_screen.dart';
+import '../theme/laundryhub_theme.dart';
 
 class VerificationCodeScreen extends StatefulWidget {
   final String email;
@@ -17,10 +18,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     6,
     (index) => TextEditingController(),
   );
-  final List<FocusNode> _focusNodes = List.generate(
-    6,
-    (index) => FocusNode(),
-  );
+  final List<FocusNode> _focusNodes = List.generate(6, (index) => FocusNode());
   bool _isLoading = false;
   String? _errorMessage;
 
@@ -72,7 +70,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Email verified successfully! You can now login.'),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
             duration: Duration(seconds: 3),
           ),
         );
@@ -115,7 +113,9 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Verification code resent'),
-          backgroundColor: result['success'] ? Colors.green : Colors.red,
+          backgroundColor: result['success']
+              ? LaundryHubColors.success
+              : LaundryHubColors.error,
         ),
       );
     } catch (e) {
@@ -123,7 +123,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to resend code'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -137,7 +137,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Email Verification'),
-        backgroundColor: Colors.blue,
+        backgroundColor: LaundryHubColors.primary,
         foregroundColor: Colors.white,
       ),
       body: Container(
@@ -145,7 +145,10 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
           gradient: LinearGradient(
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
-            colors: [Colors.blue.shade400, Colors.blue.shade800],
+            colors: [
+              LaundryHubColors.primaryLight,
+              LaundryHubColors.primaryDeep,
+            ],
           ),
         ),
         child: Center(
@@ -164,7 +167,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                     const Icon(
                       Icons.email_outlined,
                       size: 64,
-                      color: Colors.blue,
+                      color: LaundryHubColors.primary,
                     ),
                     const SizedBox(height: 16),
                     const Text(
@@ -179,7 +182,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                       'We sent a 6-digit code to',
                       style: TextStyle(
                         fontSize: 14,
-                        color: Colors.grey.shade600,
+                        color: LaundryHubColors.textMuted,
                       ),
                     ),
                     Text(
@@ -194,7 +197,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                       'Check your inbox or spam folder',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.orange.shade700,
+                        color: LaundryHubColors.warningDark,
                         fontStyle: FontStyle.italic,
                       ),
                     ),
@@ -220,7 +223,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                                 borderRadius: BorderRadius.circular(8),
                               ),
                               filled: true,
-                              fillColor: Colors.grey.shade100,
+                              fillColor: LaundryHubColors.surfaceNeutral,
                             ),
                             inputFormatters: [
                               FilteringTextInputFormatter.digitsOnly,
@@ -247,7 +250,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                         child: Text(
                           _errorMessage!,
                           style: const TextStyle(
-                            color: Colors.red,
+                            color: LaundryHubColors.error,
                             fontSize: 14,
                           ),
                         ),
@@ -258,7 +261,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                       child: ElevatedButton(
                         onPressed: _isLoading ? null : _verifyCode,
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
+                          backgroundColor: LaundryHubColors.primary,
                           foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 16),
                           shape: RoundedRectangleBorder(
@@ -288,7 +291,7 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                       children: [
                         Text(
                           "Didn't receive the code?",
-                          style: TextStyle(color: Colors.grey.shade600),
+                          style: TextStyle(color: LaundryHubColors.textMuted),
                         ),
                         TextButton(
                           onPressed: _isLoading ? null : _resendCode,

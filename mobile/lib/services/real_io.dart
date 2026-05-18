@@ -37,8 +37,9 @@ class PlatformIO {
   static Future<void> clearCache(int userId) async {
     try {
       final appDir = await getApplicationDocumentsDirectory();
-      final cachedFile =
-          File('${appDir.path}/profile_images/profile_$userId.jpg');
+      final cachedFile = File(
+        '${appDir.path}/profile_images/profile_$userId.jpg',
+      );
       if (await cachedFile.exists()) {
         await cachedFile.delete();
       }

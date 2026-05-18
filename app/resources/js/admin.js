@@ -40,11 +40,20 @@ const viewTitles = {
 
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
-const apiBaseUrl = `${window.LAUNDRYHUB_API_BASE_URL || '/api'}`.replace(/\/$/, '');
-// Ensure we use a relative path if possible to avoid CORS/port issues on localhost
-const safeApiBaseUrl = apiBaseUrl.startsWith('http') && apiBaseUrl.includes(window.location.host) 
-  ? apiBaseUrl.substring(apiBaseUrl.indexOf('/api')) 
-  : apiBaseUrl;
+const apiBaseUrl = `${window.LAUNDRYHUB_API_BASE_URL || '/api'}`.trim().replace(/\/$/, '');
+const safeApiBaseUrl = (() => {
+  if (!apiBaseUrl) return '/api';
+  if (apiBaseUrl.startsWith('/')) return apiBaseUrl;
+  if (!apiBaseUrl.startsWith('http')) return `/${apiBaseUrl.replace(/^\/+/, '')}`;
+
+  try {
+    const parsedUrl = new URL(apiBaseUrl, window.location.origin);
+    const path = parsedUrl.pathname.replace(/\/$/, '');
+    return path || '/api';
+  } catch (_) {
+    return '/api';
+  }
+})();
 
 function setText(target, value) {
   const el = typeof target === 'string' ? qs(target) : target;
@@ -256,39 +265,9 @@ function showApp() {
 }
 
 function removeDecorativeMainWatermarks() {
-  const appView = qs('#app-view');
-  if (!appView || appView.classList.contains('hidden')) return;
-
-  const keepZones = ['.sidebar', '.mobile-topbar', '#login-view', '.drawer', '.modal'];
-  const candidates = qsa('body *');
-
-  candidates.forEach((el) => {
-    if (!(el instanceof HTMLElement)) return;
-    if (el.id === 'app-view' || el.id === 'login-view') return;
-    if (keepZones.some((selector) => el.closest(selector))) return;
-
-    const rect = el.getBoundingClientRect();
-    if (rect.width < 320 || rect.height < 320) return;
-
-    const style = window.getComputedStyle(el);
-    const isOverlayLike = ['fixed', 'absolute'].includes(style.position)
-      || style.pointerEvents === 'none'
-      || Number(style.opacity || '1') < 0.35;
-    if (!isOverlayLike) return;
-
-    const classText = `${el.className || ''}`.toLowerCase();
-    const idText = `${el.id || ''}`.toLowerCase();
-    const looksDecorative = classText.includes('watermark')
-      || classText.includes('logo')
-      || classText.includes('aurora')
-      || classText.includes('bg-')
-      || idText.includes('watermark')
-      || idText.includes('logo');
-
-    if (looksDecorative || (style.zIndex === '0' && style.pointerEvents === 'none')) {
-      el.style.display = 'none';
-    }
-  });
+  // Use targeted selectors instead of scanning all DOM elements (O(1) vs O(n·layout))
+  const targets = qsa('.bg-aurora, [class*="watermark"], [id*="watermark"]');
+  targets.forEach((el) => { el.style.display = 'none'; });
 }
 
 function closeSidebar() {
@@ -345,15 +324,37 @@ function setLogoutLoading(isLoading) {
   if (cancel) cancel.disabled = isLoading;
 }
 
+const apiCache = new Map();
+
 async function apiRequest(path, options = {}) {
   const controller = new AbortController();
-  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 20000;
+  // Default 8s timeout — fast fail, avoids long hangs on slow networks
+  const timeoutMs = Number.isFinite(options.timeoutMs) ? options.timeoutMs : 8000;
   const timeoutId = timeoutMs > 0
     ? setTimeout(() => controller.abort(), timeoutMs)
     : null;
+  const suppressToast = options.suppressToast === true;
+
+  const method = options.method || 'GET';
+
+  // Clear cache on any mutating request
+  if (method !== 'GET') {
+    apiCache.clear();
+  }
+
+  // Check cache for GET requests
+  const cacheKey = path + (options.body ? JSON.stringify(options.body) : '');
+  const useCache = method === 'GET' && options.cache !== false;
+  
+  if (useCache) {
+    const cached = apiCache.get(cacheKey);
+    if (cached && Date.now() - cached.timestamp < 30000) {
+      return cached.res;
+    }
+  }
 
   const config = {
-    method: options.method || 'GET',
+    method,
     headers: {
       Accept: 'application/json',
       ...options.headers,
@@ -386,14 +387,24 @@ async function apiRequest(path, options = {}) {
       showToast('Session expired. Please sign in again.');
     }
 
-    return { ok: response.ok, status: response.status, data };
+    const resObj = { ok: response.ok, status: response.status, data };
+
+    if (useCache && response.ok) {
+      apiCache.set(cacheKey, { res: resObj, timestamp: Date.now() });
+    }
+
+    return resObj;
   } catch (error) {
     if (timeoutId) clearTimeout(timeoutId);
     if (error?.name === 'AbortError') {
-      showToast('Request timed out. The server may still be starting up.');
+      if (!suppressToast) {
+        showToast('Request timed out. The server may still be starting up.');
+      }
       return { ok: false, status: 408, data: { message: 'Request timed out.' } };
     }
-    showToast('Network error. Please try again.');
+    if (!suppressToast) {
+      showToast('Network error. Please try again.');
+    }
     return { ok: false, status: 0, data: null };
   }
 }
@@ -433,11 +444,13 @@ async function bootstrapApp() {
   state.user = user;
   showApp();
   setActiveView('dashboard');
-
-  const meRes = await apiRequest('/user');
-  if (meRes.ok && normalizeRole(meRes.data?.role) === 'admin') {
-    setSession(token, meRes.data);
-  }
+  // Token + role already verified from localStorage — no extra round-trip needed on boot.
+  // Background-refresh user data without blocking UI render.
+  apiRequest('/user').then((meRes) => {
+    if (meRes.ok && normalizeRole(meRes.data?.role) === 'admin') {
+      setSession(token, meRes.data);
+    }
+  }).catch(() => {});
 }
 
 async function handleLogin(event) {
@@ -562,59 +575,70 @@ async function loadDashboard() {
   setText('#stat-revenue', '--');
   setText('#stat-customers', '--');
 
-  const [statsRes, recentRes, topRes] = await Promise.all([
-    apiRequest('/admin/stats'),
-    apiRequest('/admin/orders/recent'),
-    apiRequest('/admin/top-customers'),
-  ]);
+  // Prefer batch endpoint, but fall back to dedicated endpoints if unavailable/slow.
+  const batchRes = await apiRequest('/admin/dashboard-batch', {
+    timeoutMs: 20000,
+    suppressToast: true,
+  });
 
-  if (statsRes.ok && statsRes.data) {
-    const total = statsRes.data.total_bookings ?? 0;
-    const pending = statsRes.data.pending_count ?? 0;
-    const revenue = statsRes.data.revenue_today ?? 0;
-    const customers = statsRes.data.customer_count ?? 0;
+  let statsData = {};
+  let recentData = [];
+  let topData = [];
 
-    setText('#stat-total-bookings', total);
-    setText('#stat-pending', pending);
-    setText('#stat-revenue', formatCurrency(revenue));
-    setText('#stat-customers', customers);
+  if (batchRes.ok) {
+    statsData = batchRes.data?.stats ?? {};
+    recentData = batchRes.data?.recent_orders ?? [];
+    topData = batchRes.data?.top_customers ?? [];
+  } else {
+    const [statsRes, recentRes, topRes] = await Promise.all([
+      apiRequest('/admin/stats', { timeoutMs: 20000, suppressToast: true }),
+      apiRequest('/admin/orders/recent', { timeoutMs: 20000, suppressToast: true }),
+      apiRequest('/admin/top-customers', { timeoutMs: 20000, suppressToast: true }),
+    ]);
 
-    // Stat badges
-    const badgeTotal = qs('#stat-badge-total');
-    if (badgeTotal) {
-      badgeTotal.className = 'stat-badge green';
-      badgeTotal.textContent = 'All time';
-    }
-    const badgePending = qs('#stat-badge-pending');
-    if (badgePending) {
-      if (pending > 0) {
-        badgePending.className = 'stat-badge amber';
-        badgePending.textContent = 'Needs action';
-      } else {
-        badgePending.className = 'stat-badge green';
-        badgePending.textContent = 'All clear';
-      }
-    }
-    const badgeRevenue = qs('#stat-badge-revenue');
-    if (badgeRevenue) {
-      if (revenue > 0) {
-        badgeRevenue.className = 'stat-badge green';
-        badgeRevenue.textContent = 'Earning today';
-      } else {
-        badgeRevenue.className = 'stat-badge red';
-        badgeRevenue.textContent = 'No revenue yet';
-      }
-    }
-    const badgeCustomers = qs('#stat-badge-customers');
-    if (badgeCustomers) {
-      badgeCustomers.className = 'stat-badge green';
-      badgeCustomers.textContent = 'Growing';
-    }
+    statsData = statsRes.ok ? (statsRes.data || {}) : {};
+    recentData = recentRes.ok ? (recentRes.data?.data || []) : [];
+    topData = topRes.ok ? (topRes.data?.data || []) : [];
   }
 
-  renderRecentOrders(recentRes.ok ? recentRes.data?.data || [] : []);
-  renderTopCustomersTo(topRes.ok ? topRes.data?.data || [] : [], '#top-customers-body');
+  // --- Stats ---
+  const total    = statsData.total_bookings ?? 0;
+  const pending  = statsData.pending_count ?? 0;
+  const revenue  = statsData.revenue_today ?? 0;
+  const customers = statsData.customer_count ?? 0;
+
+  setText('#stat-total-bookings', total);
+  setText('#stat-pending', pending);
+  setText('#stat-revenue', formatCurrency(revenue));
+  setText('#stat-customers', customers);
+
+  const badgeTotal = qs('#stat-badge-total');
+  if (badgeTotal) { badgeTotal.className = 'stat-badge green'; badgeTotal.textContent = 'All time'; }
+
+  const badgePending = qs('#stat-badge-pending');
+  if (badgePending) {
+    badgePending.className = pending > 0 ? 'stat-badge amber' : 'stat-badge green';
+    badgePending.textContent = pending > 0 ? 'Needs action' : 'All clear';
+  }
+
+  const badgeRevenue = qs('#stat-badge-revenue');
+  if (badgeRevenue) {
+    badgeRevenue.className = revenue > 0 ? 'stat-badge green' : 'stat-badge red';
+    badgeRevenue.textContent = revenue > 0 ? 'Live sales' : 'No revenue yet';
+  }
+
+  const badgeCustomers = qs('#stat-badge-customers');
+  if (badgeCustomers) { badgeCustomers.className = 'stat-badge green'; badgeCustomers.textContent = 'Growing'; }
+
+  // --- Recent orders & top customers ---
+  renderRecentOrders(recentData);
+  renderTopCustomersTo(topData, '#top-customers-body');
+
+  // Warm frequently visited sections for faster tab switches.
+  apiRequest('/admin/customers?page=1&per_page=20', { timeoutMs: 20000, suppressToast: true }).catch(() => {});
+  apiRequest('/admin/analytics', { timeoutMs: 20000, suppressToast: true }).catch(() => {});
 }
+
 
 function renderRecentOrders(orders) {
   const body = qs('#recent-orders-body');
@@ -953,7 +977,7 @@ async function loadCustomers() {
     params.set('search', state.customers.search);
   }
 
-  const res = await apiRequest(`/admin/customers?${params.toString()}`);
+  const res = await apiRequest(`/admin/customers?${params.toString()}`, { timeoutMs: 20000 });
   const body = qs('#customers-table-body');
   if (!body) return;
   body.innerHTML = '';
@@ -1131,7 +1155,7 @@ async function loadCustomerOrders(reset = false) {
 }
 
 async function loadAnalytics() {
-  const res = await apiRequest('/admin/analytics');
+  const res = await apiRequest('/admin/analytics', { timeoutMs: 20000 });
   if (!res.ok) {
     showToast('Unable to load analytics.');
     return;
@@ -1172,6 +1196,7 @@ async function loadAnalytics() {
   const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
   const weeklyContainer = qs('#weekly-bars');
+  if (!weeklyContainer) return;
   weeklyContainer.innerHTML = '';
 
   weekly.forEach((value, index) => {
@@ -1991,10 +2016,6 @@ function printCodReceipt() {
   };
 }
 
-// ==========================================
-// REPORTS DOWNLOAD
-// ==========================================
-
 function downloadCSVReport() {
   const filterVal = document.getElementById('report-filter')?.value || 'all';
   let orders = Object.values(state.bookings.byId || {});
@@ -2004,19 +2025,44 @@ function downloadCSVReport() {
   }
 
   if (!orders.length) {
-    showToast('No orders available to export for the selected filter.');
+    showToast('No orders available to export.');
     return;
   }
 
-  const headers = ['Order ID', 'Customer', 'Service', 'Weight (kg)', 'Total Price', 'Status', 'Date'];
+  const headers = [
+    'Order ID', 
+    'Customer Name', 
+    'Service Type', 
+    'Delivery Type',
+    'Weight (kg)', 
+    'Total Price', 
+    'Status', 
+    'Pickup Date', 
+    'Delivery Date',
+    'Pickup Address',
+    'Created At'
+  ];
+  
+  const csvVal = (val) => {
+    const stringVal = String(val ?? '').trim();
+    if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')) {
+      return `"${stringVal.replace(/"/g, '""')}"`;
+    }
+    return stringVal;
+  };
+
   const rows = orders.map(o => [
-    formatOrderDisplayId(o),
-    `"${escapeHtml(o.customer_name || 'N/A')}"`,
-    `"${escapeHtml(o.service_type || 'N/A')}"`,
+    csvVal(formatOrderDisplayId(o)),
+    csvVal(o.customer_name || 'N/A'),
+    csvVal(o.service_type || 'N/A'),
+    csvVal(formatDeliveryType(o.delivery_type)),
     o.weight_kg || 0,
     o.total_price || 0,
-    normalizeStatus(o.status),
-    formatDate(o.created_at)
+    csvVal(normalizeStatus(o.status)),
+    csvVal(formatDate(o.pickup_date)),
+    csvVal(formatDate(o.delivery_date)),
+    csvVal(o.pickup_address || 'N/A'),
+    csvVal(formatDate(o.created_at))
   ]);
 
   const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
@@ -2025,7 +2071,7 @@ function downloadCSVReport() {
   
   const link = document.createElement('a');
   link.href = url;
-  link.setAttribute('download', `LaundryHub_Orders_Report_${new Date().toISOString().split('T')[0]}.csv`);
+  link.setAttribute('download', `LaundryHub_Master_Report_${filterVal}_${new Date().toISOString().split('T')[0]}.csv`);
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
@@ -2040,51 +2086,135 @@ function downloadPDFReport() {
   }
 
   if (!orders.length) {
-    showToast('No orders available to export for the selected filter.');
+    showToast('No data to export.');
     return;
   }
 
-  const win = window.open('', '_blank', 'width=800,height=900');
-  if (!win) {
-    showToast('Please allow pop-ups to generate PDF report.');
-    return;
-  }
+  // Analytics Calculations
+  const totalRevenue = orders.reduce((sum, o) => sum + Number(o.total_price || 0), 0);
+  const totalWeight = orders.reduce((sum, o) => sum + Number(o.weight_kg || 0), 0);
+  
+  const serviceCounts = {};
+  orders.forEach(o => {
+    const s = o.service_type || 'General';
+    serviceCounts[s] = (serviceCounts[s] || 0) + 1;
+  });
+
+  const win = window.open('', '_blank', 'width=1000,height=1200');
+  if (!win) return;
 
   const rowsHtml = orders.map(o => `
     <tr>
-      <td>${formatOrderDisplayId(o)}</td>
-      <td>${escapeHtml(o.customer_name || 'N/A')}</td>
+      <td style="font-family:monospace; font-size:11px;">${formatOrderDisplayId(o)}</td>
+      <td style="font-weight:600;">${escapeHtml(o.customer_name || 'N/A')}</td>
       <td>${escapeHtml(o.service_type || 'N/A')}</td>
       <td>${o.weight_kg || 0}kg</td>
-      <td>${formatCurrency(o.total_price || 0)}</td>
-      <td><span style="text-transform:capitalize;">${normalizeStatus(o.status)}</span></td>
+      <td style="font-weight:700; color:#1e40af;">${formatCurrency(o.total_price || 0)}</td>
+      <td><span class="status-badge ${normalizeStatus(o.status)}">${normalizeStatus(o.status)}</span></td>
+      <td style="color:#64748b; font-size:11px;">${formatDate(o.created_at)}</td>
     </tr>
   `).join('');
+
+  const serviceBreakdownHtml = Object.entries(serviceCounts)
+    .sort((a,b) => b[1] - a[1])
+    .map(([name, count]) => `
+      <div class="service-stat">
+        <span class="service-name">${name}</span>
+        <span class="service-count">${count} orders</span>
+      </div>
+    `).join('');
 
   win.document.write(`
     <!DOCTYPE html>
     <html>
       <head>
-        <title>LaundryHub Monthly Report</title>
+        <meta charset="utf-8">
+        <title>LaundryHub Executive Report</title>
         <style>
-          body { font-family: 'Segoe UI', Arial, sans-serif; color: #08213D; padding: 40px; }
-          .header { text-align: center; margin-bottom: 40px; border-bottom: 2px solid #1565C0; padding-bottom: 20px; }
-          .header h1 { margin: 0 0 10px 0; color: #1565C0; }
-          table { width: 100%; border-collapse: collapse; margin-top: 20px; font-size: 12px; }
-          th { background: #f1f5f9; text-align: left; padding: 10px; border-bottom: 2px solid #cbd5e1; }
-          td { padding: 10px; border-bottom: 1px solid #e2e8f0; }
-          @page { size: A4 portrait; margin: 20mm; }
-          @media print { .hint { display: none; } }
+          @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+          body { font-family: 'Plus Jakarta Sans', sans-serif; color: #1e293b; padding: 40px; line-height: 1.6; background: #fff; }
+          
+          .no-print-bar { background:#1e40af; color:#fff; padding:12px 24px; border-radius:12px; margin-bottom:30px; display:flex; justify-content:space-between; align-items:center; box-shadow: 0 4px 12px rgba(30,64,175,0.2); }
+          .print-btn { background:#fff; color:#1e40af; border:none; padding:8px 20px; border-radius:8px; font-weight:700; cursor:pointer; }
+          
+          .header-main { display: flex; justify-content: space-between; border-bottom: 3px solid #1e40af; padding-bottom: 24px; margin-bottom: 32px; }
+          .brand-box h1 { margin: 0; font-size: 32px; font-weight: 800; color: #1e40af; letter-spacing: -0.04em; }
+          .brand-box p { margin: 0; font-size: 14px; font-weight: 600; color: #64748b; }
+          
+          .meta-box { text-align: right; }
+          .meta-box h2 { margin: 0; font-size: 14px; font-weight: 800; text-transform: uppercase; color: #1e40af; }
+          .meta-box p { margin: 2px 0 0; font-size: 12px; color: #64748b; font-weight: 500; }
+
+          .grid-summary { display: grid; grid-template-columns: 2fr 1fr; gap: 32px; margin-bottom: 32px; }
+          
+          .stats-panel { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+          .stat-item { background: #f8fafc; border: 1px solid #e2e8f0; padding: 16px; border-radius: 16px; }
+          .stat-label { font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; margin-bottom: 4px; }
+          .stat-value { font-size: 20px; font-weight: 800; color: #1e293b; }
+
+          .breakdown-panel { background: #eff6ff; border-radius: 16px; padding: 16px; }
+          .breakdown-title { font-size: 11px; font-weight: 800; text-transform: uppercase; color: #1e40af; margin-bottom: 12px; }
+          .service-stat { display: flex; justify-content: space-between; font-size: 12px; margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px solid rgba(30,64,175,0.1); }
+          .service-name { font-weight: 600; }
+          
+          table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+          th { text-align: left; padding: 12px; font-size: 10px; font-weight: 800; text-transform: uppercase; color: #64748b; background: #f8fafc; border-bottom: 2px solid #e2e8f0; }
+          td { padding: 12px; border-bottom: 1px solid #f1f5f9; font-size: 12px; }
+          
+          .status-badge { display: inline-block; padding: 2px 8px; border-radius: 6px; font-size: 9px; font-weight: 800; text-transform: uppercase; }
+          .status-badge.completed { background: #dcfce7; color: #166534; }
+          .status-badge.pending { background: #fef3c7; color: #92400e; }
+          .status-badge.ready { background: #dbeafe; color: #1e40af; }
+          
+          .signature-section { margin-top: 60px; display: grid; grid-template-columns: repeat(2, 1fr); gap: 100px; }
+          .sig-box { border-top: 1px solid #1e293b; padding-top: 8px; text-align: center; }
+          .sig-label { font-size: 11px; font-weight: 700; color: #1e293b; }
+          .sig-date { font-size: 10px; color: #64748b; }
+
+          .footer-note { margin-top: 48px; text-align: center; font-size: 10px; color: #94a3b8; border-top: 1px solid #f1f5f9; padding-top: 16px; }
+          @media print { .no-print-bar { display: none; } body { padding: 0; } }
         </style>
       </head>
       <body>
-        <div class="hint" style="background:#e0f2fe; padding:10px; margin-bottom:20px; text-align:center; color:#0369a1; border-radius:6px; font-size:13px;">
-          💡 To save as PDF: Choose "Save as PDF" in the print dialog.
+        <div class="no-print-bar">
+          <span>Executive Business Report Ready</span>
+          <button class="print-btn" onclick="window.print()">Download PDF</button>
         </div>
-        <div class="header">
-          <h1>LaundryHub Orders Report</h1>
-          <p>Generated on ${new Date().toLocaleDateString()}</p>
+
+        <div class="header-main">
+          <div class="brand-box">
+            <h1>LaundryHub</h1>
+            <p>Operations & Analytics Unit</p>
+          </div>
+          <div class="meta-box">
+            <h2>Management Report</h2>
+            <p>Scope: ${filterVal.toUpperCase()}</p>
+            <p>Ref: LH-REP-${new Date().getTime().toString().slice(-6)}</p>
+            <p>${new Date().toLocaleDateString('en-PH', { month: 'long', day: 'numeric', year: 'numeric' })}</p>
+          </div>
         </div>
+
+        <div class="grid-summary">
+          <div class="stats-panel">
+            <div class="stat-item">
+              <div class="stat-label">Total Transactions</div>
+              <div class="stat-value">${orders.length}</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Processed Weight</div>
+              <div class="stat-value">${totalWeight.toFixed(1)}kg</div>
+            </div>
+            <div class="stat-item">
+              <div class="stat-label">Gross Revenue</div>
+              <div class="stat-value">${formatCurrency(totalRevenue)}</div>
+            </div>
+          </div>
+          <div class="breakdown-panel">
+            <div class="breakdown-title">Service Performance</div>
+            ${serviceBreakdownHtml}
+          </div>
+        </div>
+
         <table>
           <thead>
             <tr>
@@ -2094,12 +2224,29 @@ function downloadPDFReport() {
               <th>Weight</th>
               <th>Total</th>
               <th>Status</th>
+              <th>Date</th>
             </tr>
           </thead>
           <tbody>
             ${rowsHtml}
           </tbody>
         </table>
+
+        <div class="signature-section">
+          <div class="sig-box">
+            <div class="sig-label">Prepared By</div>
+            <div class="sig-date">${state.user?.name || 'Admin'}</div>
+          </div>
+          <div class="sig-box">
+            <div class="sig-label">Verified By</div>
+            <div class="sig-date">Management / Audit</div>
+          </div>
+        </div>
+
+        <div class="footer-note">
+          This document is generated automatically by the LaundryHub Management System. 
+          Confidential - Internal Use Only. &copy; ${new Date().getFullYear()} LaundryHub Management System &bull; Confidential &bull; Generated by Admin
+        </div>
       </body>
     </html>
   `);
@@ -2119,4 +2266,3 @@ document.addEventListener('DOMContentLoaded', () => {
   if (btnCsv) btnCsv.addEventListener('click', downloadCSVReport);
   if (btnPdf) btnPdf.addEventListener('click', downloadPDFReport);
 });
-

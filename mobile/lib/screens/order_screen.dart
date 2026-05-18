@@ -6,18 +6,19 @@ import '../services/order_service.dart';
 import '../services/service_service.dart';
 import '../config/api_config.dart';
 import 'booking_confirmed_screen.dart';
+import '../theme/laundryhub_theme.dart';
 
 // â”€â”€ Design tokens (mirrors HomeScreen / _C) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 class _K {
-  static const primary = Color(0xFF2563EB);
-  static const primaryPale = Color(0xFFEFF6FF);
-  static const navy = Color(0xFF0F172A);
-  static const slate = Color(0xFF334155);
-  static const muted = Color(0xFF94A3B8);
-  static const border = Color(0xFFE2E8F0);
-  static const surface = Color(0xFFF8FAFC);
-  static const amber = Color(0xFFF59E0B);
-  static const amberLight = Color(0xFFFFFBEB);
+  static const primary = LaundryHubColors.primary;
+  static const primaryPale = LaundryHubColors.primaryPale;
+  static const navy = LaundryHubColors.textPrimaryDeep;
+  static const slate = LaundryHubColors.textSecondary;
+  static const muted = LaundryHubColors.textSubtle;
+  static const border = LaundryHubColors.borderSoft;
+  static const surface = LaundryHubColors.surfaceSoft;
+  static const amber = LaundryHubColors.warning;
+  static const amberLight = LaundryHubColors.warningPale;
 
   static const fallbackPickupFee = 30.0;
   static const fallbackDeliveryFee = 30.0;
@@ -83,7 +84,6 @@ class _OrderScreenState extends State<OrderScreen> {
   String? _addOnPageErrorMessage;
   int? _failedAddOnPage;
   int? _selectedBarangayId;
-  String _barangaysBasePoint = 'Barangay 47';
   bool _deliveryCanBeHigher = true;
   String _pickupAppliesWhen = _K.pickupAppliesWhenFallback;
   String _deliveryAppliesWhen = _K.deliveryAppliesWhenFallback;
@@ -154,9 +154,9 @@ class _OrderScreenState extends State<OrderScreen> {
       query['service_id'] = requestedServiceId.toString();
     }
 
-    final uri = Uri.parse('${ApiConfig.apiPath}/add-on-services').replace(
-      queryParameters: query,
-    );
+    final uri = Uri.parse(
+      '${ApiConfig.apiPath}/add-on-services',
+    ).replace(queryParameters: query);
 
     try {
       final response = await _httpClient.get(
@@ -295,9 +295,6 @@ class _OrderScreenState extends State<OrderScreen> {
             _selectedBarangayId = null;
           }
 
-          _barangaysBasePoint =
-              meta?['base_barangay']?.toString() ?? 'Barangay 47';
-
           final deliveryCanBeHigher = explanation?['delivery_can_be_higher'];
           _deliveryCanBeHigher = deliveryCanBeHigher is bool
               ? deliveryCanBeHigher
@@ -358,9 +355,9 @@ class _OrderScreenState extends State<OrderScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF1565C0)),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: _K.primary)),
           child: child!,
         );
       },
@@ -377,9 +374,9 @@ class _OrderScreenState extends State<OrderScreen> {
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF1565C0)),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: _K.primary)),
           child: child!,
         );
       },
@@ -398,9 +395,9 @@ class _OrderScreenState extends State<OrderScreen> {
       lastDate: DateTime.now().add(const Duration(days: 30)),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF1565C0)),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: _K.primary)),
           child: child!,
         );
       },
@@ -417,9 +414,9 @@ class _OrderScreenState extends State<OrderScreen> {
       initialTime: TimeOfDay.now(),
       builder: (context, child) {
         return Theme(
-          data: Theme.of(context).copyWith(
-            colorScheme: const ColorScheme.light(primary: Color(0xFF1565C0)),
-          ),
+          data: Theme.of(
+            context,
+          ).copyWith(colorScheme: const ColorScheme.light(primary: _K.primary)),
           child: child!,
         );
       },
@@ -709,7 +706,7 @@ class _OrderScreenState extends State<OrderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please select a service'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -757,7 +754,7 @@ class _OrderScreenState extends State<OrderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to place order'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(10),
@@ -775,7 +772,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please select a service'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: LaundryHubColors.errorStrong,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -799,7 +796,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please select a date'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: LaundryHubColors.errorStrong,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -813,7 +810,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please wait while we load Tacloban barangays'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: LaundryHubColors.errorStrong,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -827,7 +824,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please select your barangay'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: LaundryHubColors.errorStrong,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -841,7 +838,7 @@ class _OrderScreenState extends State<OrderScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please enter house, street, or landmark'),
-            backgroundColor: Colors.red.shade700,
+            backgroundColor: LaundryHubColors.errorStrong,
             behavior: SnackBarBehavior.floating,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
@@ -1003,7 +1000,7 @@ class _OrderScreenState extends State<OrderScreen> {
           const SizedBox(height: 6),
           Text(
             'What do you need washed today?',
-            style: GoogleFonts.dmSans(fontSize: 13, color: _K.muted),
+            style: GoogleFonts.dmSans(fontSize: 14, color: _K.navy),
           ),
           const SizedBox(height: 24),
           if (_loadingServices)
@@ -1054,7 +1051,7 @@ class _OrderScreenState extends State<OrderScreen> {
                                 width: 48,
                                 height: 48,
                                 decoration: BoxDecoration(
-                                  color: _K.primaryPale,
+                                  color: const Color(0xFFCFFAFE),
                                   borderRadius: BorderRadius.circular(14),
                                 ),
                                 child: Center(child: _buildServiceIcon(svc)),
@@ -1082,7 +1079,7 @@ class _OrderScreenState extends State<OrderScreen> {
                                 const SizedBox(height: 6),
                                 Text(
                                   description,
-                                  textAlign: TextAlign.center,
+                                  textAlign: TextAlign.left,
                                   softWrap: true,
                                   style: GoogleFonts.dmSans(
                                     fontSize: 11,
@@ -1128,7 +1125,7 @@ class _OrderScreenState extends State<OrderScreen> {
   Widget _buildServiceIcon(Map<String, dynamic> svc) {
     final name = svc['name'] as String? ?? '';
     final icon = ServiceService.getServiceIcon(name);
-    return Icon(icon, size: 26, color: _K.primary);
+    return Icon(icon, size: 26, color: const Color(0xFF0891B2));
   }
 
   // â”€â”€ Step 2: Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
@@ -1411,12 +1408,14 @@ class _OrderScreenState extends State<OrderScreen> {
                           : _addOnPageErrorMessage!,
                       style: GoogleFonts.dmSans(
                         fontSize: 11,
-                        color: Colors.red.shade700,
+                        color: LaundryHubColors.errorStrong,
                       ),
                     ),
                   ),
                   TextButton(
-                    onPressed: _isFetchingAddOnPage ? null : _retryAddOnPageLoad,
+                    onPressed: _isFetchingAddOnPage
+                        ? null
+                        : _retryAddOnPageLoad,
                     style: TextButton.styleFrom(
                       minimumSize: const Size(0, 30),
                       padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -1465,13 +1464,20 @@ class _OrderScreenState extends State<OrderScreen> {
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
-              color: Colors.blue.shade50,
+              color: LaundryHubColors.primaryPale,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.blue.shade100, width: 1),
+              border: Border.all(
+                color: LaundryHubColors.primarySoftBorder,
+                width: 1,
+              ),
             ),
             child: Row(
               children: [
-                Icon(Icons.info_outline, size: 20, color: Colors.blue.shade700),
+                Icon(
+                  Icons.info_outline,
+                  size: 20,
+                  color: LaundryHubColors.primary,
+                ),
                 const SizedBox(width: 10),
                 Expanded(
                   child: Text(
@@ -1479,7 +1485,7 @@ class _OrderScreenState extends State<OrderScreen> {
                     style: GoogleFonts.dmSans(
                       fontSize: 11,
                       fontWeight: FontWeight.w500,
-                      color: Colors.blue.shade900,
+                      color: LaundryHubColors.primaryDeep,
                     ),
                   ),
                 ),
@@ -1501,7 +1507,7 @@ class _OrderScreenState extends State<OrderScreen> {
                 color: _K.muted,
               ),
               filled: true,
-              fillColor: const Color(0xFFF8FAFC),
+              fillColor: _K.surface,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 14,
                 vertical: 14,
@@ -1607,20 +1613,27 @@ class _OrderScreenState extends State<OrderScreen> {
                     ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: _K.border, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: _K.border,
+                        width: 1.5,
+                      ),
                     ),
                     enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: _K.border, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: _K.border,
+                        width: 1.5,
+                      ),
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: _K.primary, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: _K.primary,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   items: _barangays.map((barangay) {
-                    final zone = (barangay['zone'] as num?)?.toInt() ?? 0;
-                    final zoneLabel = zone > 0 ? 'Zone $zone' : 'Zone';
                     final displayName =
                         (barangay['display_name'] as String? ?? '').trim();
                     final name = (barangay['name'] as String? ?? '').trim();
@@ -1703,8 +1716,7 @@ class _OrderScreenState extends State<OrderScreen> {
             decoration: InputDecoration(
               labelText: 'House No. / Street / Landmark',
               labelStyle: GoogleFonts.dmSans(fontSize: 12, color: _K.muted),
-              hintText:
-                  'e.g., House 123, Green Street, near Alpha Gym',
+              hintText: 'e.g., House 123, Green Street, near Alpha Gym',
               hintStyle: GoogleFonts.dmSans(fontSize: 13, color: _K.muted),
               prefixIcon: const Padding(
                 padding: EdgeInsets.only(bottom: 20),
@@ -1740,7 +1752,7 @@ class _OrderScreenState extends State<OrderScreen> {
               width: double.infinity,
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF1F5F9),
+                color: LaundryHubColors.surfaceNeutral,
                 borderRadius: BorderRadius.circular(12),
                 border: Border.all(color: _K.border, width: 1),
               ),
@@ -2111,7 +2123,7 @@ class _OrderScreenState extends State<OrderScreen> {
               border: Border.all(color: _K.border, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: const Color(0xFF0F172A).withValues(alpha: 0.05),
+                  color: _K.navy.withValues(alpha: 0.05),
                   blurRadius: 12,
                   offset: const Offset(0, 3),
                 ),
@@ -2312,12 +2324,12 @@ class _OrderScreenState extends State<OrderScreen> {
         height: 52,
         decoration: BoxDecoration(
           gradient: const LinearGradient(
-            colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+            colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
           ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: [
             BoxShadow(
-              color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+              color: LaundryHubColors.primary.withValues(alpha: 0.35),
               blurRadius: 16,
               offset: const Offset(0, 6),
             ),
@@ -2365,17 +2377,23 @@ class _OrderScreenState extends State<OrderScreen> {
         decoration: BoxDecoration(
           gradient: _isLoading
               ? const LinearGradient(
-                  colors: [Color(0xFF90CAF9), Color(0xFF90CAF9)],
+                  colors: [
+                    LaundryHubColors.primaryLight,
+                    LaundryHubColors.primaryLight,
+                  ],
                 )
               : const LinearGradient(
-                  colors: [Color(0xFF2563EB), Color(0xFF3B82F6)],
+                  colors: [
+                    LaundryHubColors.primary,
+                    LaundryHubColors.primaryLight,
+                  ],
                 ),
           borderRadius: BorderRadius.circular(14),
           boxShadow: _isLoading
               ? []
               : [
                   BoxShadow(
-                    color: const Color(0xFF2563EB).withValues(alpha: 0.35),
+                    color: LaundryHubColors.primary.withValues(alpha: 0.35),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),

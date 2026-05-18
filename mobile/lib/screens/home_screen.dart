@@ -9,19 +9,22 @@ import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 class _C {
-  static const primary     = LaundryHubColors.primaryVivid;
+  static const primary = LaundryHubColors.primaryVivid;
   static const primaryPale = LaundryHubColors.primaryPale;
-  static const navy        = LaundryHubColors.textPrimary;
-  static const slate       = LaundryHubColors.textSecondary;
-  static const muted       = LaundryHubColors.textSubtle;
-  static const border      = LaundryHubColors.borderSoft;
-  static const surface     = LaundryHubColors.surfaceSoft;
-  static const green       = LaundryHubColors.success;
-  static const greenLight  = LaundryHubColors.successSoft;
-  static const amber       = LaundryHubColors.warning;
-  static const amberLight  = LaundryHubColors.warningSoft;
-  static const red         = LaundryHubColors.errorStrong;
-  static const redLight    = LaundryHubColors.errorSoft;
+  static const navy = LaundryHubColors.textPrimary;
+  static const slate = LaundryHubColors.textSecondary;
+  static const muted = LaundryHubColors.textSubtle;
+  static const border = LaundryHubColors.borderSoft;
+  static const surface = LaundryHubColors.surfaceSoft;
+  static const green = LaundryHubColors.success;
+  static const greenDark = LaundryHubColors.successDark;
+  static const greenLight = LaundryHubColors.successSoft;
+  static const amber = LaundryHubColors.warning;
+  static const amberLight = LaundryHubColors.warningSoft;
+  static const pendingText = Color(0xFF0E7490);
+  static const pendingBg = Color(0xFFCFFAFE);
+  static const red = LaundryHubColors.errorStrong;
+  static const redLight = LaundryHubColors.errorSoft;
 }
 
 class HomeScreen extends StatefulWidget {
@@ -32,7 +35,8 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
+class _HomeScreenState extends State<HomeScreen>
+    with AutomaticKeepAliveClientMixin, WidgetsBindingObserver {
   @override
   bool get wantKeepAlive => true;
 
@@ -41,13 +45,15 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
   bool _ordersLoading = true;
   List<dynamic> _services = [];
   bool _servicesLoading = true;
-  AppLifecycleState? _lastLifecycleState;
+
+  DateTime? _lastLoaded;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
     _loadHomeBatch();
+    _lastLoaded = DateTime.now();
   }
 
   @override
@@ -58,19 +64,25 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _lastLifecycleState = state;
-    // Refresh orders when app comes back to foreground
     if (state == AppLifecycleState.resumed) {
-      debugPrint('App resumed - refreshing customer orders');
-      _loadOrders();
+      _refreshIfStale();
     }
   }
 
   @override
   void didUpdateWidget(HomeScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Reload data when widget updates (e.g., when coming back to this tab)
-    _loadOrders();
+    // Only reload if data is stale (older than 30 seconds) to avoid
+    // spamming the API on every tab switch or rebuild.
+    _refreshIfStale();
+  }
+
+  void _refreshIfStale() {
+    final now = DateTime.now();
+    if (_lastLoaded == null || now.difference(_lastLoaded!).inSeconds > 30) {
+      _lastLoaded = now;
+      _loadOrders();
+    }
   }
 
   Future<void> _loadUser() async {
@@ -99,9 +111,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       final services = data['services'];
 
       setState(() {
-        _user = user is Map
-            ? Map<String, dynamic>.from(user as Map<dynamic, dynamic>)
-            : null;
+        _user = user is Map ? Map<String, dynamic>.from(user) : null;
         _orders = orders is List ? List<dynamic>.from(orders) : [];
         _services = services is List ? List<dynamic>.from(services) : [];
         _ordersLoading = false;
@@ -121,7 +131,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final result = await OrderService.getOrders();
     if (!mounted) return;
     setState(() {
-      _orders = result['success'] == true ? result['data'] as List<dynamic> : [];
+      _orders = result['success'] == true
+          ? result['data'] as List<dynamic>
+          : [];
       _ordersLoading = false;
     });
   }
@@ -131,7 +143,9 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final result = await ServiceService.getServices();
     if (!mounted) return;
     setState(() {
-      _services = result['success'] == true ? result['data'] as List<dynamic> : [];
+      _services = result['success'] == true
+          ? result['data'] as List<dynamic>
+          : [];
       _servicesLoading = false;
     });
   }
@@ -141,17 +155,26 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Logout',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         content: const Text('Are you sure you want to logout?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+            child: Text(
+              'Cancel',
+              style: TextStyle(color: LaundryHubColors.textMuted),
+            ),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
             style: TextButton.styleFrom(foregroundColor: _C.primary),
-            child: const Text('Logout', style: TextStyle(fontWeight: FontWeight.bold)),
+            child: const Text(
+              'Logout',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ),
         ],
       ),
@@ -182,8 +205,13 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     for (final o in _orders) {
       final m = o as Map<String, dynamic>;
       final s = (m['status'] ?? '').toString().toLowerCase();
-      if (s == 'pending' || s == 'ongoing' || s == 'ready' ||
-          s == 'in_progress' || s == 'processing') return m;
+      if (s == 'pending' ||
+          s == 'ongoing' ||
+          s == 'ready' ||
+          s == 'in_progress' ||
+          s == 'processing') {
+        return m;
+      }
     }
     return null;
   }
@@ -199,32 +227,55 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   Color _statusTextColor(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return _C.amber;
-      case 'in_progress': case 'ongoing': case 'processing': return _C.primary;
-      case 'ready': return _C.green;
-      case 'completed': return _C.muted;
-      default: return _C.red;
+      case 'pending':
+        return _C.pendingText;
+      case 'in_progress':
+      case 'ongoing':
+      case 'processing':
+        return _C.primary;
+      case 'ready':
+        return _C.green;
+      case 'completed':
+        return _C.greenDark;
+      default:
+        return _C.red;
     }
   }
 
   Color _statusBgColor(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return _C.amberLight;
-      case 'in_progress': case 'ongoing': case 'processing': return _C.primaryPale;
-      case 'ready': return _C.greenLight;
-      case 'completed': return _C.surface;
-      default: return _C.redLight;
+      case 'pending':
+        return _C.pendingBg;
+      case 'in_progress':
+      case 'ongoing':
+      case 'processing':
+        return _C.primaryPale;
+      case 'ready':
+        return _C.greenLight;
+      case 'completed':
+        return _C.greenLight;
+      default:
+        return _C.redLight;
     }
   }
 
   String _statusLabel(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return 'Pending';
-      case 'in_progress': case 'ongoing': case 'processing': return 'Ongoing';
-      case 'ready': return 'Ready';
-      case 'completed': return 'Completed';
-      case 'cancelled': case 'declined': return 'Declined';
-      default: return s;
+      case 'pending':
+        return 'Pending';
+      case 'in_progress':
+      case 'ongoing':
+      case 'processing':
+        return 'Ongoing';
+      case 'ready':
+        return 'Ready';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+      case 'declined':
+        return 'Declined';
+      default:
+        return s;
     }
   }
 
@@ -237,7 +288,8 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     child: Text(
       _statusLabel(status),
       style: GoogleFonts.dmSans(
-        fontSize: 11, fontWeight: FontWeight.w600,
+        fontSize: 11,
+        fontWeight: FontWeight.w600,
         color: _statusTextColor(status),
       ),
     ),
@@ -245,10 +297,16 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   double _orderProgress(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return 0.15;
-      case 'in_progress': case 'ongoing': case 'processing': return 0.50;
-      case 'ready': return 0.85;
-      default: return 0.15;
+      case 'pending':
+        return 0.15;
+      case 'in_progress':
+      case 'ongoing':
+      case 'processing':
+        return 0.50;
+      case 'ready':
+        return 0.85;
+      default:
+        return 0.15;
     }
   }
 
@@ -259,23 +317,47 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     try {
       final dt = DateTime.parse(d);
       const months = [
-        'Jan','Feb','Mar','Apr','May','Jun',
-        'Jul','Aug','Sep','Oct','Nov','Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-    } catch (_) { return d; }
+    } catch (_) {
+      return d;
+    }
   }
 
   Widget _sectionHeader(String title, String action, VoidCallback onTap) => Row(
     mainAxisAlignment: MainAxisAlignment.spaceBetween,
     children: [
-      Text(title, style: GoogleFonts.outfit(
-        fontSize: 17, fontWeight: FontWeight.w700,
-        color: _C.navy, letterSpacing: -0.3)),
+      Text(
+        title,
+        style: GoogleFonts.outfit(
+          fontSize: 17,
+          fontWeight: FontWeight.w700,
+          color: _C.navy,
+          letterSpacing: -0.3,
+        ),
+      ),
       GestureDetector(
         onTap: onTap,
-        child: Text(action, style: GoogleFonts.dmSans(
-          fontSize: 13, fontWeight: FontWeight.w600, color: _C.primary)),
+        child: Text(
+          action,
+          style: GoogleFonts.dmSans(
+            fontSize: 13,
+            fontWeight: FontWeight.w600,
+            color: _C.primary,
+          ),
+        ),
       ),
     ],
   );
@@ -291,11 +373,23 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final totalOrders = _orders.length;
     final activeCount = _orders.where((o) {
       final s = (o as Map)['status']?.toString().toLowerCase() ?? '';
-      return ['pending','in_progress','ongoing','processing','ready'].contains(s);
+      return [
+        'pending',
+        'in_progress',
+        'ongoing',
+        'processing',
+        'ready',
+      ].contains(s);
     }).length;
-    final spent = _orders.cast<Map<String, dynamic>>().fold<double>(0.0, (sum, o) {
-      if ((o['status'] ?? '').toString().toLowerCase() != 'completed') return sum;
-      return sum + (double.tryParse(o['total_price']?.toString() ?? '0') ?? 0.0);
+    final spent = _orders.cast<Map<String, dynamic>>().fold<double>(0.0, (
+      sum,
+      o,
+    ) {
+      if ((o['status'] ?? '').toString().toLowerCase() != 'completed') {
+        return sum;
+      }
+      return sum +
+          (double.tryParse(o['total_price']?.toString() ?? '0') ?? 0.0);
     });
 
     return Scaffold(
@@ -338,11 +432,7 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     return Container(
       width: double.infinity,
       decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          colors: [LaundryHubColors.primaryDeep, LaundryHubColors.primaryVivid, LaundryHubColors.primaryVividLight],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        color: Color(0xFF0891B2),
       ),
       child: SafeArea(
         bottom: false,
@@ -357,18 +447,30 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(_getGreeting(),
-                        style: GoogleFonts.dmSans(color: Colors.white70, fontSize: 13)),
-                      Text(name,
+                      Text(
+                        _getGreeting(),
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
+                      ),
+                      Text(
+                        name,
                         style: GoogleFonts.outfit(
-                          color: Colors.white, fontSize: 20,
-                          fontWeight: FontWeight.w800, letterSpacing: -0.3)),
+                          color: Colors.white,
+                          fontSize: 20,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: -0.3,
+                        ),
+                      ),
                     ],
                   ),
                   Row(
                     children: [
-                      _headerBtn(Icons.notifications_outlined,
-                        onTap: () => widget.onNavigateToTab?.call(3)),
+                      _headerBtn(
+                        Icons.notifications_outlined,
+                        onTap: () => widget.onNavigateToTab?.call(3),
+                      ),
                       const SizedBox(width: 8),
                       _headerBtn(Icons.logout_rounded, onTap: _confirmLogout),
                     ],
@@ -396,9 +498,10 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
       GestureDetector(
         onTap: onTap,
         child: Container(
-          width: 42, height: 42,
+          width: 42,
+          height: 42,
           decoration: BoxDecoration(
-            color: Colors.white.withOpacity(0.15),
+            color: Colors.white.withValues(alpha: 0.15),
             borderRadius: BorderRadius.circular(14),
           ),
           child: Icon(icon, color: Colors.white, size: 20),
@@ -409,17 +512,28 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     child: Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
-        color: Colors.white.withOpacity(0.12),
+        color: Colors.white.withValues(alpha: 0.25),
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: Colors.white.withOpacity(0.15)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(value, style: GoogleFonts.outfit(
-            color: Colors.white, fontSize: 18, fontWeight: FontWeight.w800)),
-          Text(label, style: GoogleFonts.dmSans(
-            color: Colors.white60, fontSize: 9.5)),
+          Text(
+            value,
+            style: GoogleFonts.outfit(
+              color: Colors.white,
+              fontSize: 18,
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          Text(
+            label,
+            style: GoogleFonts.dmSans(
+              color: Colors.white.withValues(alpha: 0.85),
+              fontSize: 12,
+            ),
+          ),
         ],
       ),
     ),
@@ -429,8 +543,11 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   Widget _buildServicesGrid() => Column(
     children: [
-      _sectionHeader('Our Services', 'See all →',
-        () => widget.onNavigateToTab?.call(2)),
+      _sectionHeader(
+        'Our Services',
+        'See all →',
+        () => widget.onNavigateToTab?.call(2),
+      ),
       const SizedBox(height: 14),
       _servicesLoading
           ? SizedBox(
@@ -440,56 +557,72 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               ),
             )
           : _services.isEmpty
-              ? SizedBox(
-                  height: 120,
-                  child: Center(
-                    child: Text('No services available',
-                      style: GoogleFonts.dmSans(color: _C.muted, fontSize: 12)),
-                  ),
-                )
-              : GridView.builder(
-                  key: ValueKey('services_${_services.length}'),
-                  shrinkWrap: true,
-                  physics: const NeverScrollableScrollPhysics(),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 3,
-                    mainAxisSpacing: 16.0,
-                    crossAxisSpacing: 16.0,
-                    childAspectRatio: 1.0,
-                  ),
-                  itemCount: _services.isEmpty ? 0 : (_services.length > 3 ? 3 : _services.length),
-                  itemBuilder: (ctx, i) {
-                    final svc = _services[i] as Map<String, dynamic>;
-                    final name = svc['name'] as String? ?? '';
-                    final icon = ServiceService.getServiceIcon(name);
-                    final formattedName = ServiceService.formatServiceName(name);
-                    
-                    return GestureDetector(
-                      onTap: () => widget.onNavigateToTab?.call(2),
-                      child: Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: _C.border, width: 1.5),
-                          boxShadow: [BoxShadow(
-                            color: LaundryHubColors.textPrimary.withOpacity(0.05),
-                            blurRadius: 12, offset: const Offset(0, 3))],
-                        ),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          crossAxisAlignment: CrossAxisAlignment.center,
-                          children: [
-                            Icon(icon, size: 40, color: _C.primary),
-                            const SizedBox(height: 12),
-                            Text(formattedName, textAlign: TextAlign.center,
-                              style: GoogleFonts.dmSans(
-                                fontSize: 12, fontWeight: FontWeight.w600, color: _C.slate)),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
+          ? SizedBox(
+              height: 120,
+              child: Center(
+                child: Text(
+                  'No services available',
+                  style: GoogleFonts.dmSans(color: _C.muted, fontSize: 12),
                 ),
+              ),
+            )
+          : GridView.builder(
+              key: ValueKey('services_${_services.length}'),
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                mainAxisSpacing: 16.0,
+                crossAxisSpacing: 16.0,
+                childAspectRatio: 1.0,
+              ),
+              itemCount: _services.isEmpty
+                  ? 0
+                  : (_services.length > 3 ? 3 : _services.length),
+              itemBuilder: (ctx, i) {
+                final svc = _services[i] as Map<String, dynamic>;
+                final name = svc['name'] as String? ?? '';
+                final icon = ServiceService.getServiceIcon(name);
+                final formattedName = ServiceService.formatServiceName(name);
+
+                return GestureDetector(
+                  onTap: () => widget.onNavigateToTab?.call(2),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: _C.border, width: 1.5),
+                      boxShadow: [
+                        BoxShadow(
+                          color: LaundryHubColors.textPrimary.withValues(
+                            alpha: 0.05,
+                          ),
+                          blurRadius: 12,
+                          offset: const Offset(0, 3),
+                        ),
+                      ],
+                    ),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        Icon(icon, size: 40, color: _C.primary),
+                        const SizedBox(height: 12),
+                        Text(
+                          formattedName,
+                          textAlign: TextAlign.center,
+                          style: GoogleFonts.dmSans(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: _C.slate,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
     ],
   );
 
@@ -501,23 +634,36 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     final svcName = _fmtServiceName(order['service_type'] ?? '');
     final progress = _orderProgress(status);
     const steps = ['Received', 'Washing', 'Drying', 'Ready'];
-    final activeIdx = status == 'pending' ? 0
-        : (status == 'in_progress' || status == 'ongoing' || status == 'processing') ? 1
-        : status == 'ready' ? 3 : 0;
+    final activeIdx = status == 'pending'
+        ? 0
+        : (status == 'in_progress' ||
+              status == 'ongoing' ||
+              status == 'processing')
+        ? 1
+        : status == 'ready'
+        ? 3
+        : 0;
 
     return Column(
       children: [
-        _sectionHeader('Active Order', 'Track →',
-          () => widget.onNavigateToTab?.call(1)),
+        _sectionHeader(
+          'Active Order',
+          'Track →',
+          () => widget.onNavigateToTab?.call(1),
+        ),
         const SizedBox(height: 14),
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: _C.primary, width: 1.5),
-            boxShadow: [BoxShadow(
-              color: LaundryHubColors.primaryVivid.withOpacity(0.30),
-              blurRadius: 18, offset: const Offset(0, 6))],
+            boxShadow: [
+              BoxShadow(
+                color: LaundryHubColors.primaryVivid.withValues(alpha: 0.30),
+                blurRadius: 18,
+                offset: const Offset(0, 6),
+              ),
+            ],
           ),
           padding: const EdgeInsets.all(16),
           child: Column(
@@ -528,24 +674,38 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 children: [
                   Row(
                     children: [
-                      Icon(ServiceService.getServiceIcon(order['service_type'] ?? ''), 
-                           size: 18, color: _C.primary),
+                      Icon(
+                        ServiceService.getServiceIcon(
+                          order['service_type'] ?? '',
+                        ),
+                        size: 18,
+                        color: _C.primary,
+                      ),
                       const SizedBox(width: 8),
-                      Text(orderId, style: GoogleFonts.outfit(
-                        fontSize: 13, fontWeight: FontWeight.w800, color: _C.primary)),
+                      Text(
+                        orderId,
+                        style: GoogleFonts.outfit(
+                          fontSize: 13,
+                          fontWeight: FontWeight.w800,
+                          color: _C.primary,
+                        ),
+                      ),
                     ],
                   ),
                   _statusBadge(status),
                 ],
               ),
               const SizedBox(height: 6),
-              Text('$svcName · ${order['weight_kg'] ?? '–'} kg',
-                style: GoogleFonts.dmSans(fontSize: 12, color: _C.slate)),
+              Text(
+                '$svcName · ${order['weight_kg'] ?? '–'} kg',
+                style: GoogleFonts.dmSans(fontSize: 12, color: _C.slate),
+              ),
               const SizedBox(height: 14),
               ClipRRect(
                 borderRadius: BorderRadius.circular(6),
                 child: LinearProgressIndicator(
-                  value: progress, minHeight: 6,
+                  value: progress,
+                  minHeight: 6,
                   backgroundColor: _C.border,
                   valueColor: const AlwaysStoppedAnimation<Color>(_C.primary),
                 ),
@@ -556,27 +716,56 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
                 children: steps.asMap().entries.map((e) {
                   final isActive = e.key == activeIdx;
                   final isDone = e.key < activeIdx;
-                  return Text(e.value, style: GoogleFonts.dmSans(
-                    fontSize: 9,
-                    fontWeight: (isActive || isDone) ? FontWeight.w700 : FontWeight.w400,
-                    color: isDone ? _C.green : isActive ? _C.primary : _C.muted,
-                  ));
+                  return Text(
+                    e.value,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 9,
+                      fontWeight: (isActive || isDone)
+                          ? FontWeight.w700
+                          : FontWeight.w400,
+                      color: isDone
+                          ? _C.green
+                          : isActive
+                          ? _C.primary
+                          : _C.muted,
+                    ),
+                  );
                 }).toList(),
               ),
               const SizedBox(height: 14),
               Container(
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 8,
+                ),
                 decoration: BoxDecoration(
-                  color: _C.primaryPale, borderRadius: BorderRadius.circular(10)),
+                  color: _C.primaryPale,
+                  borderRadius: BorderRadius.circular(10),
+                ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.access_time_outlined, size: 14, color: _C.primary),
+                    const Icon(
+                      Icons.access_time_outlined,
+                      size: 14,
+                      color: _C.primary,
+                    ),
                     const SizedBox(width: 6),
-                    Text('Ready for pickup in approx. ',
-                      style: GoogleFonts.dmSans(fontSize: 10.5, color: _C.slate)),
-                    Text('1 hour', style: GoogleFonts.dmSans(
-                      fontSize: 10.5, fontWeight: FontWeight.w700, color: _C.primary)),
+                    Text(
+                      'Ready for pickup in approx. ',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 10.5,
+                        color: _C.slate,
+                      ),
+                    ),
+                    Text(
+                      '1 hour',
+                      style: GoogleFonts.dmSans(
+                        fontSize: 10.5,
+                        fontWeight: FontWeight.w700,
+                        color: _C.primary,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -591,21 +780,32 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   Widget _buildRecentOrdersList(List<Map<String, dynamic>> orders) => Column(
     children: [
-      _sectionHeader('Recent Orders', 'View all →',
-        () => widget.onNavigateToTab?.call(1)),
+      _sectionHeader(
+        'Recent Orders',
+        'View all →',
+        () => widget.onNavigateToTab?.call(1),
+      ),
       const SizedBox(height: 14),
       if (_ordersLoading)
         const Padding(
           padding: EdgeInsets.all(24),
-          child: Center(child: CircularProgressIndicator(color: _C.primary)))
+          child: Center(child: CircularProgressIndicator(color: _C.primary)),
+        )
       else if (orders.isEmpty)
         Container(
           padding: const EdgeInsets.all(24),
           decoration: BoxDecoration(
-            color: Colors.white, borderRadius: BorderRadius.circular(14),
-            border: Border.all(color: _C.border, width: 1.5)),
-          child: Center(child: Text('No recent orders yet',
-            style: GoogleFonts.dmSans(color: _C.muted, fontSize: 13))))
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _C.border, width: 1.5),
+          ),
+          child: Center(
+            child: Text(
+              'No recent orders yet',
+              style: GoogleFonts.dmSans(color: _C.muted, fontSize: 13),
+            ),
+          ),
+        )
       else
         ListView.builder(
           shrinkWrap: true,
@@ -618,31 +818,39 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
 
   Widget _buildRecentOrderTile(Map<String, dynamic> order) {
     final status = (order['status'] ?? '').toString().toLowerCase();
-    final name   = _fmtServiceName(order['service_type'] ?? '');
-    final icon   = ServiceService.getServiceIcon(name);
-    final id     = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
-    final date   = _fmtOrderDate(order['pickup_date'] ?? order['created_at']);
-    final total  = order['total_price'] != null
+    final name = _fmtServiceName(order['service_type'] ?? '');
+    final icon = ServiceService.getServiceIcon(name);
+    final id = '#LH-${(order['id'] ?? 0).toString().padLeft(4, '0')}';
+    final date = _fmtOrderDate(order['pickup_date'] ?? order['created_at']);
+    final total = order['total_price'] != null
         ? '₱${double.tryParse(order['total_price'].toString())?.toStringAsFixed(0) ?? '–'}'
         : '–';
 
     return Container(
       margin: const EdgeInsets.only(bottom: 10),
       decoration: BoxDecoration(
-        color: Colors.white, borderRadius: BorderRadius.circular(14),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
         border: Border.all(color: _C.border, width: 1.5),
-        boxShadow: [BoxShadow(
-          color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
-          blurRadius: 12, offset: const Offset(0, 3))],
+        boxShadow: [
+          BoxShadow(
+            color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
+            blurRadius: 12,
+            offset: const Offset(0, 3),
+          ),
+        ],
       ),
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
         child: Row(
           children: [
             Container(
-              width: 42, height: 42,
+              width: 42,
+              height: 42,
               decoration: BoxDecoration(
-                color: _C.primaryPale, borderRadius: BorderRadius.circular(12)),
+                color: _C.primaryPale,
+                borderRadius: BorderRadius.circular(12),
+              ),
               child: Center(child: Icon(icon, size: 22, color: _C.primary)),
             ),
             const SizedBox(width: 12),
@@ -650,11 +858,19 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(name, style: GoogleFonts.dmSans(
-                    fontSize: 13, fontWeight: FontWeight.w700, color: _C.navy)),
+                  Text(
+                    name,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w700,
+                      color: _C.navy,
+                    ),
+                  ),
                   const SizedBox(height: 2),
-                  Text('$id · $date',
-                    style: GoogleFonts.dmSans(fontSize: 10.5, color: _C.muted)),
+                  Text(
+                    '$id · $date',
+                    style: GoogleFonts.dmSans(fontSize: 10.5, color: _C.muted),
+                  ),
                 ],
               ),
             ),
@@ -663,8 +879,14 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
               children: [
                 _statusBadge(status),
                 const SizedBox(height: 4),
-                Text(total, style: GoogleFonts.outfit(
-                  fontSize: 13, fontWeight: FontWeight.w800, color: _C.navy)),
+                Text(
+                  total,
+                  style: GoogleFonts.outfit(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: _C.navy,
+                  ),
+                ),
               ],
             ),
           ],
@@ -673,5 +895,3 @@ class _HomeScreenState extends State<HomeScreen> with AutomaticKeepAliveClientMi
     );
   }
 }
-
-

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/laundryhub_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,7 +11,7 @@ import '../models/profile_model.dart';
 class EditProfileScreen extends StatefulWidget {
   final CustomerProfile? profile;
 
-  const EditProfileScreen({Key? key, this.profile}) : super(key: key);
+  const EditProfileScreen({super.key, this.profile});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
@@ -190,7 +191,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(validationError),
-              backgroundColor: Colors.red,
+              backgroundColor: LaundryHubColors.error,
             ),
           );
         }
@@ -254,7 +255,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile picture updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
           ),
         );
       }
@@ -268,7 +269,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to upload image: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -284,7 +285,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Last name and first name are required'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
       return;
@@ -295,7 +296,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Middle initial must be a single letter'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
       return;
@@ -332,7 +333,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
           ),
         );
         Navigator.pop(context, true);
@@ -342,7 +343,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update profile: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -631,7 +632,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

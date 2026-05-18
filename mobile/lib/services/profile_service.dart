@@ -96,8 +96,9 @@ class ProfileService {
       }
 
       final payload = response.data['data'] as Map<String, dynamic>? ?? {};
-      final profileMap =
-          Map<String, dynamic>.from(payload['profile'] as Map? ?? const {});
+      final profileMap = Map<String, dynamic>.from(
+        payload['profile'] as Map? ?? const {},
+      );
       final completionMap = Map<String, dynamic>.from(
         payload['completion_status'] as Map? ??
             const {
@@ -128,7 +129,9 @@ class ProfileService {
     } on Exception catch (e) {
       throw Exception('Error loading profile batch: ${e.toString()}');
     } catch (e) {
-      throw Exception('Unexpected error loading profile batch: ${e.toString()}');
+      throw Exception(
+        'Unexpected error loading profile batch: ${e.toString()}',
+      );
     }
   }
 
@@ -166,10 +169,12 @@ class ProfileService {
       if (country != null) data['country'] = country;
       if (dateOfBirth != null) data['date_of_birth'] = dateOfBirth;
       if (gender != null) data['gender'] = gender;
-      if (preferredLanguage != null)
+      if (preferredLanguage != null) {
         data['preferred_language'] = preferredLanguage;
-      if (notificationsEnabled != null)
+      }
+      if (notificationsEnabled != null) {
         data['notifications_enabled'] = notificationsEnabled;
+      }
 
       final response = await _dio.put(
         '$baseUrl/profile',

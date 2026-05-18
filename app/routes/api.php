@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\CustomerProfileController;
 
+Route::get('/health', fn () => response()->json(['ok' => true]));
+
 // Public auth routes with tuned rate limits
 Route::post('/register', [AuthController::class, 'register'])->middleware('throttle:auth-register');
 Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:auth-login');
@@ -55,6 +57,7 @@ Route::middleware(['auth:sanctum', 'throttle:api-auth'])->group(function () {
 Route::middleware(['auth:sanctum', 'admin', 'throttle:api-admin'])->prefix('admin')->group(function () {
     // Admin-only routes
     Route::get('/stats', [AdminController::class, 'stats']);
+    Route::get('/dashboard-batch', [AdminController::class, 'dashboardBatch']);
     Route::get('/orders/recent', [AdminController::class, 'recentOrders']);
     Route::get('/orders', [AdminController::class, 'orders']);
     Route::patch('/orders/{order}/status', [AdminController::class, 'updateOrderStatus']);

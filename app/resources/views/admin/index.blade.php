@@ -24,7 +24,8 @@
     $canUseBuildFallback = is_string($adminCssFallback) && is_string($adminJsFallback);
   @endphp
   <script>
-    window.LAUNDRYHUB_API_BASE_URL = @json(rtrim(url('/api'), '/'));
+    // Admin panel uses same-origin API to avoid localhost/127.0.0.1 host mismatch fetch errors.
+    window.LAUNDRYHUB_API_BASE_URL = "/api";
   </script>
   @if ($canUseBuildAssets)
     <link rel="stylesheet" href="{{ asset('build/' . $adminCss) }}">
@@ -218,22 +219,22 @@
             <div class="panel stat-card fade-up">
               <p class="card-label">Total bookings</p>
               <div id="stat-total-bookings" class="card-value heading-font">--</div>
-              <div id="stat-badge-total" class="stat-badge muted">Loading…</div>
+              <div id="stat-badge-total" class="stat-badge muted">Loading...</div>
             </div>
             <div class="panel stat-card fade-up delay-1">
               <p class="card-label">Pending orders</p>
               <div id="stat-pending" class="card-value heading-font">--</div>
-              <div id="stat-badge-pending" class="stat-badge muted">Loading…</div>
+              <div id="stat-badge-pending" class="stat-badge muted">Loading...</div>
             </div>
             <div class="panel stat-card fade-up delay-2">
               <p class="card-label">Revenue today</p>
               <div id="stat-revenue" class="card-value heading-font">--</div>
-              <div id="stat-badge-revenue" class="stat-badge muted">Loading…</div>
+              <div id="stat-badge-revenue" class="stat-badge muted">Loading...</div>
             </div>
             <div class="panel stat-card fade-up delay-3">
               <p class="card-label">Active customers</p>
               <div id="stat-customers" class="card-value heading-font">--</div>
-              <div id="stat-badge-customers" class="stat-badge muted">Loading…</div>
+              <div id="stat-badge-customers" class="stat-badge muted">Loading...</div>
             </div>
           </div>
 
@@ -361,7 +362,7 @@
             </div>
 
             <div class="flex items-center justify-between mt-auto" style="padding: 16px 18px; border-top: 0.5px solid var(--color-border);">
-              <div id="bookings-footer-info" class="text-[11px] text-muted">Showing 0 of 0 orders — Page 1 of 1</div>
+              <div id="bookings-footer-info" class="text-[11px] text-muted">Showing 0 of 0 orders - Page 1 of 1</div>
               <div class="flex items-center gap-2">
                 <button id="bookings-prev" class="bookings-page-btn outline">Previous</button>
                 <div id="bookings-current-page" class="bookings-page-btn active">1</div>
@@ -419,7 +420,7 @@
                 <p class="text-sm text-muted">Monitor revenue, bookings, customers, and service performance.</p>
               </div>
               <div class="flex items-center gap-3">
-                <select id="report-filter" class="form-input text-sm px-3 py-2 border rounded-md" style="min-width: 140px;">
+                <select id="report-filter" class="report-select" style="min-width: 140px;">
                   <option value="all">All Orders</option>
                   <option value="completed">Completed Only</option>
                   <option value="pending">Pending Only</option>
@@ -632,7 +633,7 @@
           <p id="booking-modal-subtitle" class="text-xs text-muted"></p>
         </div>
         <button id="booking-modal-close" class="modal-close button-outline" type="button" aria-label="Close booking details">
-          <span aria-hidden="true">✕</span>
+          <span aria-hidden="true">&times;</span>
         </button>
       </div>
       <div id="booking-modal-body" class="modal-body"></div>
@@ -779,9 +780,9 @@
       <div class="modal-header">
         <div>
           <h3 id="cod-receipt-title" class="heading-font text-lg font-semibold">COD Receipt</h3>
-          <p class="text-xs text-muted">Cash on Delivery — Payment Record</p>
+          <p class="text-xs text-muted">Cash on Delivery - Payment Record</p>
         </div>
-        <button id="cod-receipt-close" class="modal-close button-outline" type="button" aria-label="Close receipt">✕</button>
+        <button id="cod-receipt-close" class="modal-close button-outline" type="button" aria-label="Close receipt">&times;</button>
       </div>
 
       <!-- BODY -->

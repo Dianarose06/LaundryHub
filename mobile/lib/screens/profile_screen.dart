@@ -89,7 +89,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('Failed to load profile: ${e.toString()}'),
-              backgroundColor: Colors.red,
+              backgroundColor: LaundryHubColors.error,
             ),
           );
         }
@@ -124,7 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: LaundryHubColors.textMuted),
             ),
           ),
           TextButton(
@@ -188,7 +188,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Please fill in all password fields.'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
                 return;
@@ -200,7 +200,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     content: Text(
                       'New password must be at least 8 characters.',
                     ),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
                 return;
@@ -212,7 +212,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     content: Text(
                       'New password and confirmation do not match.',
                     ),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
                 return;
@@ -227,12 +227,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   confirmPassword: confirm,
                 );
 
-                if (!mounted) return;
+                if (!dialogContext.mounted) return;
                 Navigator.of(dialogContext).pop();
-                ScaffoldMessenger.of(this.context).showSnackBar(
+                ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(
                     content: Text('Password changed successfully.'),
-                    backgroundColor: Colors.green,
+                    backgroundColor: LaundryHubColors.success,
                   ),
                 );
               } catch (e) {
@@ -241,7 +241,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   SnackBar(
                     content: Text(e.toString().replaceFirst('Exception: ', '')),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
               }
@@ -354,7 +354,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Email not available for verification.'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
       return;
@@ -395,8 +395,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           'Verification code sent to your email.',
                     ),
                     backgroundColor: result['success'] == true
-                        ? Colors.green
-                        : Colors.red,
+                        ? LaundryHubColors.success
+                        : LaundryHubColors.error,
                   ),
                 );
               } catch (_) {
@@ -407,7 +407,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Failed to send verification email.'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
               }
@@ -420,7 +420,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Please enter a valid 6-digit code.'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
                 return;
@@ -431,11 +431,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
               try {
                 final result = await AuthService.verifyCode(email, code);
 
-                if (!mounted) return;
+                if (!dialogContext.mounted) return;
 
                 setDialogState(() => isVerifyingCode = false);
 
                 if (result['success'] == true) {
+                  if (!dialogContext.mounted) return;
                   Navigator.of(dialogContext).pop();
                   await _loadProfile();
 
@@ -446,17 +447,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         result['message']?.toString() ??
                             'Email verified successfully.',
                       ),
-                      backgroundColor: Colors.green,
+                      backgroundColor: LaundryHubColors.success,
                     ),
                   );
                 } else {
+                  if (!mounted) return;
                   ScaffoldMessenger.of(this.context).showSnackBar(
                     SnackBar(
                       content: Text(
                         result['message']?.toString() ??
                             'Invalid verification code.',
                       ),
-                      backgroundColor: Colors.red,
+                      backgroundColor: LaundryHubColors.error,
                     ),
                   );
                 }
@@ -468,7 +470,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ScaffoldMessenger.of(this.context).showSnackBar(
                   const SnackBar(
                     content: Text('Verification failed. Please try again.'),
-                    backgroundColor: Colors.red,
+                    backgroundColor: LaundryHubColors.error,
                   ),
                 );
               }
@@ -512,7 +514,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'Code sent. Check your email inbox.',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.green,
+                        color: LaundryHubColors.success,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -583,7 +585,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: LaundryHubColors.textMuted),
             ),
           ),
           if (_profile?.profilePictureUrl != null)
@@ -592,7 +594,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 Navigator.pop(context);
                 _deleteProfilePicture();
               },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
+              style: TextButton.styleFrom(
+                foregroundColor: LaundryHubColors.error,
+              ),
               child: const Text('Delete'),
             ),
           ElevatedButton(
@@ -603,10 +607,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: LaundryHubColors.primary,
             ),
-            child: const Text(
-              'Change',
-              style: TextStyle(color: Colors.white),
-            ),
+            child: const Text('Change', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -634,7 +635,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
         if (!mounted) return;
         setState(() => _isUploadingProfilePicture = false);
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(validationError), backgroundColor: Colors.red),
+          SnackBar(
+            content: Text(validationError),
+            backgroundColor: LaundryHubColors.error,
+          ),
         );
         return;
       }
@@ -677,29 +681,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _imageCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile picture updated successfully.'),
-          backgroundColor: Colors.green,
+          backgroundColor: LaundryHubColors.success,
         ),
       );
-
-      // ✅ Reload profile to get fresh data from server
-      await _loadProfile();
-
-      // ✅ Update cache buster again after reload
-      if (mounted) {
-        setState(() {
-          _imageCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
-        });
-      }
     } catch (e) {
       if (!mounted) return;
       setState(() => _isUploadingProfilePicture = false);
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to upload image: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
     }
@@ -724,16 +719,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
             onPressed: () => Navigator.pop(context, false),
             child: Text(
               'Cancel',
-              style: TextStyle(color: Colors.grey.shade600),
+              style: TextStyle(color: LaundryHubColors.textMuted),
             ),
           ),
           ElevatedButton(
             onPressed: () => Navigator.pop(context, true),
-            style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
-            child: const Text(
-              'Delete',
-              style: TextStyle(color: Colors.white),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: LaundryHubColors.error,
             ),
+            child: const Text('Delete', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
@@ -761,10 +755,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
         _imageCacheBuster = DateTime.now().millisecondsSinceEpoch.toString();
       });
 
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile picture deleted successfully.'),
-          backgroundColor: Colors.green,
+          backgroundColor: LaundryHubColors.success,
         ),
       );
 
@@ -782,7 +777,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to delete profile picture: ${e.toString()}'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
     }
@@ -812,7 +807,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ? 'Notifications enabled successfully.'
                 : 'Notifications disabled successfully.',
           ),
-          backgroundColor: Colors.green,
+          backgroundColor: LaundryHubColors.success,
         ),
       );
     } catch (e) {
@@ -823,7 +818,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(e.toString().replaceFirst('Exception: ', '')),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
     }
@@ -886,7 +881,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: SafeArea(
         child: _isLoading
             ? const Center(
-                child: CircularProgressIndicator(color: LaundryHubColors.primary),
+                child: CircularProgressIndicator(
+                  color: LaundryHubColors.primary,
+                ),
               )
             : SingleChildScrollView(
                 child: Column(
@@ -895,11 +892,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Container(
                       width: double.infinity,
                       decoration: const BoxDecoration(
-                        gradient: LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [LaundryHubColors.primary, LaundryHubColors.primaryLight],
-                        ),
+                        color: Color(0xFF0891B2),
                         borderRadius: BorderRadius.only(
                           bottomLeft: Radius.circular(40),
                           bottomRight: Radius.circular(40),
@@ -984,8 +977,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                                       return _buildInitialCircle();
                                                     },
                                                 loadingBuilder: (context, child, loadingProgress) {
-                                                  if (loadingProgress == null)
+                                                  if (loadingProgress == null) {
                                                     return child;
+                                                  }
                                                   return Center(
                                                     child: CircularProgressIndicator(
                                                       value:
@@ -1066,10 +1060,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         child: Container(
                           padding: const EdgeInsets.all(16),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: LaundryHubColors.primaryPale,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
-                              color: Colors.blue.shade200,
+                              color: LaundryHubColors.primarySoftBorder,
                               width: 1,
                             ),
                           ),
@@ -1107,9 +1101,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       100,
                                   minHeight: 8,
                                   valueColor: AlwaysStoppedAnimation(
-                                    Colors.blue.shade400,
+                                    LaundryHubColors.primaryLight,
                                   ),
-                                  backgroundColor: Colors.grey.shade200,
+                                  backgroundColor:
+                                      LaundryHubColors.surfaceMuted,
                                 ),
                               ),
                               const SizedBox(height: 8),
@@ -1117,7 +1112,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 '${_completionStatus!.completedFields} of ${_completionStatus!.totalFields} fields completed',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: LaundryHubColors.textMuted,
                                 ),
                               ),
                             ],
@@ -1167,8 +1162,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? 'Verified'
                                 : 'Not Verified',
                             valueColor: (_user?['email_verified_at'] != null)
-                                ? Colors.green
-                                : Colors.orange,
+                                ? LaundryHubColors.success
+                                : LaundryHubColors.warning,
                           ),
                           const SizedBox(height: 12),
                           _buildInfoCard(
@@ -1204,8 +1199,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 ? 'Enabled'
                                 : 'Disabled',
                             valueColor: (_profile?.notificationsEnabled ?? true)
-                                ? Colors.green
-                                : Colors.orange,
+                                ? LaundryHubColors.success
+                                : LaundryHubColors.warning,
                           ),
                           if (_profile?.bio != null &&
                               _profile!.bio!.isNotEmpty) ...[
@@ -1259,7 +1254,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.lock_outline,
                             title: 'Change Password',
                             subtitle: 'Update your account password',
-                            color: LaundryHubColors.primaryLight,
+                            color: LaundryHubColors.primary,
                             onTap: _showChangePasswordDialog,
                           ),
                           if (_user?['email_verified_at'] == null) ...[
@@ -1279,7 +1274,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             icon: Icons.logout_rounded,
                             title: 'Logout',
                             subtitle: 'Sign out of your account',
-                            color: Colors.red,
+                            color: LaundryHubColors.error,
                             onTap: _confirmLogout,
                           ),
                         ],
@@ -1292,7 +1287,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       'LaundryHub v1.0.0',
                       style: TextStyle(
                         fontSize: 12,
-                        color: Colors.grey.shade500,
+                        color: LaundryHubColors.textTertiary,
                       ),
                     ),
                     const SizedBox(height: 24),
@@ -1316,7 +1311,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: LaundryHubColors.surfaceMuted,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1339,7 +1334,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
               children: [
                 Text(
                   label,
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: LaundryHubColors.textMuted,
+                  ),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -1375,7 +1373,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           borderRadius: BorderRadius.circular(12),
           boxShadow: [
             BoxShadow(
-              color: Colors.grey.shade200,
+              color: LaundryHubColors.surfaceMuted,
               blurRadius: 8,
               offset: const Offset(0, 2),
             ),
@@ -1407,7 +1405,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 2),
                   Text(
                     subtitle,
-                    style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: LaundryHubColors.textMuted,
+                    ),
                   ),
                 ],
               ),
@@ -1415,7 +1416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             Icon(
               Icons.arrow_forward_ios_rounded,
               size: 16,
-              color: Colors.grey.shade400,
+              color: LaundryHubColors.textSubtle,
             ),
           ],
         ),
@@ -1433,7 +1434,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         borderRadius: BorderRadius.circular(12),
         boxShadow: [
           BoxShadow(
-            color: Colors.grey.shade200,
+            color: LaundryHubColors.surfaceMuted,
             blurRadius: 8,
             offset: const Offset(0, 2),
           ),
@@ -1471,14 +1472,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   enabled
                       ? 'Order and account alerts are enabled'
                       : 'Notifications are currently disabled',
-                  style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                  style: TextStyle(
+                    fontSize: 12,
+                    color: LaundryHubColors.textMuted,
+                  ),
                 ),
               ],
             ),
           ),
           Switch(
             value: enabled,
-            activeColor: LaundryHubColors.primary,
+            activeThumbColor: LaundryHubColors.primary,
             onChanged: _toggleNotificationsQuick,
           ),
         ],
@@ -1486,5 +1490,3 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 }
-
-

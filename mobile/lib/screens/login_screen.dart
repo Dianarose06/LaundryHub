@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'package:flutter/services.dart';
 import '../config/api_config.dart';
 import '../services/auth_service.dart';
 import '../theme/laundryhub_theme.dart';
@@ -29,41 +28,6 @@ class _LoginScreenState extends State<LoginScreen> {
     super.dispose();
   }
 
-  Future<void> _showAdminWebDialog() async {
-    if (!mounted) return;
-
-    await showDialog<void>(
-      context: context,
-      builder: (ctx) => AlertDialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        title: const Text('Admin access'),
-        content: Text(
-          'Admin dashboard is available on the web panel.\n\n${ApiConfig.adminWebUrl}',
-          style: const TextStyle(fontSize: 14),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () async {
-              await Clipboard.setData(
-                ClipboardData(text: ApiConfig.adminWebUrl),
-              );
-              if (!mounted) return;
-              Navigator.pop(ctx);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Admin panel link copied.')),
-              );
-            },
-            child: const Text('Copy link'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(ctx),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
-  }
-
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
     setState(() => _isLoading = true);
@@ -81,8 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       if (role == 'admin') {
-        final redirectUrl = result['redirect_url']?.toString() ?? ApiConfig.adminWebUrl;
-        
+        final redirectUrl =
+            result['redirect_url']?.toString() ?? ApiConfig.adminWebUrl;
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Redirecting to Admin Web Panel...'),
@@ -111,12 +76,14 @@ class _LoginScreenState extends State<LoginScreen> {
     } else if (result['email_not_verified'] == true) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content:
-              const Text('Please verify your email first during registration.'),
-          backgroundColor: Colors.orange.shade700,
+          content: const Text(
+            'Please verify your email first during registration.',
+          ),
+          backgroundColor: LaundryHubColors.warningDark,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 4),
         ),
@@ -133,10 +100,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ],
           ),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           margin: const EdgeInsets.all(16),
           duration: const Duration(seconds: 4),
         ),
@@ -145,10 +113,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Login failed'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape:
-              RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
           margin: const EdgeInsets.all(16),
         ),
       );
@@ -171,7 +140,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     end: Alignment.bottomRight,
                     colors: [
                       LaundryHubColors.primary,
-                      LaundryHubColors.primaryLight
+                      LaundryHubColors.primaryLight,
                     ],
                   ),
                   borderRadius: BorderRadius.only(
@@ -183,11 +152,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 child: Column(
                   children: [
                     const SizedBox(height: 42),
-                    SizedBox(
-                      width: 176,
-                      height: 176,
-                      child: _buildBrandLogo(),
-                    ),
+                    SizedBox(width: 176, height: 176, child: _buildBrandLogo()),
                     const SizedBox(height: 10),
                     Text(
                       'Fresh & Clean, Every Time',
@@ -210,11 +175,15 @@ class _LoginScreenState extends State<LoginScreen> {
                         color: Colors.white,
                         borderRadius: BorderRadius.circular(20),
                         border: Border.all(
-                          color: Colors.blue.shade100.withValues(alpha: 0.85),
+                          color: LaundryHubColors.primarySoftBorder.withValues(
+                            alpha: 0.85,
+                          ),
                         ),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.blue.shade200.withValues(alpha: 0.45),
+                            color: LaundryHubColors.primarySoft.withValues(
+                              alpha: 0.45,
+                            ),
                             blurRadius: 24,
                             spreadRadius: 1,
                             offset: const Offset(0, 10),
@@ -240,7 +209,9 @@ class _LoginScreenState extends State<LoginScreen> {
                             Text(
                               'Sign in to your account',
                               style: TextStyle(
-                                  fontSize: 14, color: Colors.grey.shade600),
+                                fontSize: 14,
+                                color: LaundryHubColors.textMuted,
+                              ),
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
@@ -255,8 +226,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                 if (v == null || v.trim().isEmpty) {
                                   return 'Please enter your email';
                                 }
-                                if (!RegExp(r'^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$')
-                                    .hasMatch(v.trim())) {
+                                if (!RegExp(
+                                  r'^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$',
+                                ).hasMatch(v.trim())) {
                                   return 'Please enter a valid email';
                                 }
                                 return null;
@@ -266,22 +238,24 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextFormField(
                               controller: _passwordController,
                               obscureText: _obscurePassword,
-                              decoration: _inputDecoration(
-                                'Password',
-                                Icons.lock_outline,
-                              ).copyWith(
-                                suffixIcon: IconButton(
-                                  icon: Icon(
-                                    _obscurePassword
-                                        ? Icons.visibility_off_outlined
-                                        : Icons.visibility_outlined,
-                                    color: Colors.grey,
+                              decoration:
+                                  _inputDecoration(
+                                    'Password',
+                                    Icons.lock_outline,
+                                  ).copyWith(
+                                    suffixIcon: IconButton(
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: LaundryHubColors.textSubtle,
+                                      ),
+                                      onPressed: () => setState(
+                                        () => _obscurePassword =
+                                            !_obscurePassword,
+                                      ),
+                                    ),
                                   ),
-                                  onPressed: () => setState(
-                                    () => _obscurePassword = !_obscurePassword,
-                                  ),
-                                ),
-                              ),
                               validator: (v) {
                                 if (v == null || v.isEmpty) {
                                   return 'Please enter your password';
@@ -319,7 +293,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                   backgroundColor: LaundryHubColors.primary,
                                   foregroundColor: Colors.white,
                                   disabledBackgroundColor:
-                                      const Color(0xFF90CAF9),
+                                      LaundryHubColors.primaryLight,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(14),
                                   ),
@@ -358,7 +332,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     const Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.grey),
+                      style: TextStyle(color: LaundryHubColors.textSubtle),
                     ),
                     TextButton(
                       onPressed: () => Navigator.push(
@@ -386,10 +360,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildBrandLogo() {
-    return Image.asset(
-      'assets/images/logo.png',
-      fit: BoxFit.contain,
-    );
+    return Image.asset('assets/images/logo.png', fit: BoxFit.contain);
   }
 
   InputDecoration _inputDecoration(String label, IconData icon) {
@@ -397,15 +368,15 @@ class _LoginScreenState extends State<LoginScreen> {
       labelText: label,
       prefixIcon: Icon(icon, color: LaundryHubColors.primary),
       filled: true,
-      fillColor: Colors.grey.shade50,
+      fillColor: LaundryHubColors.pageBackground,
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 16),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: const BorderSide(color: LaundryHubColors.borderNeutral),
       ),
       enabledBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.grey.shade300),
+        borderSide: const BorderSide(color: LaundryHubColors.borderNeutral),
       ),
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
@@ -413,11 +384,11 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
       errorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade400),
+        borderSide: const BorderSide(color: LaundryHubColors.error),
       ),
       focusedErrorBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: Colors.red.shade400, width: 2),
+        borderSide: const BorderSide(color: LaundryHubColors.error, width: 2),
       ),
     );
   }

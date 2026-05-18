@@ -162,19 +162,19 @@ class AdminController extends Controller
     {
         $normalized = strtolower(trim($serviceName));
 
-        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash–dry–fold')) {
-            return '🧺';
+        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash-dry-fold')) {
+            return 'WDF';
         } elseif (str_contains($normalized, 'dry cleaning')) {
-            return '✨';
+            return 'DRY';
         } elseif (str_contains($normalized, 'beddings')) {
-            return '🛏️';
+            return 'BED';
         } elseif (str_contains($normalized, 'express wash')) {
-            return '⚡';
+            return 'EXP';
         } elseif (str_contains($normalized, 'soft wash')) {
-            return '🌸';
+            return 'SOFT';
         }
 
-        return '🧺';
+        return 'WDF';
     }
 
     public function stats(Request $request)
@@ -360,7 +360,7 @@ class AdminController extends Controller
             ->map(fn ($u) => [
                 'name'   => $u->name,
                 'orders' => $u->orders_count,
-                'spend'  => '₱' . number_format($u->orders_sum_total_price ?? 0, 0),
+                'spend'  => 'PHP ' . number_format($u->orders_sum_total_price ?? 0, 0),
             ]);
 
         return response()->json(['data' => $customers]);
@@ -475,7 +475,7 @@ class AdminController extends Controller
                 'name' => $user->name,
                 'orders' => (int) $user->orders_count,
                 'spend' => (float) ($user->orders_sum_total_price ?? 0),
-                'spend_label' => '₱' . number_format($user->orders_sum_total_price ?? 0, 0),
+                'spend_label' => 'PHP ' . number_format($user->orders_sum_total_price ?? 0, 0),
             ])
             ->values();
 
@@ -699,3 +699,4 @@ class AdminController extends Controller
         ]);
     }
 }
+

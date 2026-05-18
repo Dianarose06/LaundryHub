@@ -73,9 +73,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Reset code sent to your email'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -85,9 +87,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to send code'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -101,7 +105,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter all 6 digits'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -112,7 +116,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Passwords do not match'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -134,9 +138,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Password reset successfully!'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Future.delayed(const Duration(seconds: 1), () {
@@ -146,9 +152,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to reset password'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -187,7 +195,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   'Enter your email to receive a reset code',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey.shade600,
+                    color: LaundryHubColors.textMuted,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -307,7 +315,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Center(
                       child: Text(
                         'Resend code in $_resendTimer seconds',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(color: LaundryHubColors.textMuted),
                       ),
                     )
                   else
@@ -369,7 +377,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         onPressed: () {
                           setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          );
                         },
                       ),
                       border: OutlineInputBorder(

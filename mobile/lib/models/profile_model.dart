@@ -185,10 +185,8 @@ class ProfileCompletionStatus {
     if (value is! Map) return {};
 
     return value.map(
-      (key, mapValue) => MapEntry(
-        key.toString(),
-        CustomerProfile._asBool(mapValue),
-      ),
+      (key, mapValue) =>
+          MapEntry(key.toString(), CustomerProfile._asBool(mapValue)),
     );
   }
 }

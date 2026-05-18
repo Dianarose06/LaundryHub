@@ -6,19 +6,21 @@ import 'package:laundryhub/theme/laundryhub_theme.dart';
 
 // ignore_for_file: constant_identifier_names
 class _M {
-  static const primary     = LaundryHubColors.primaryVivid;
+  static const primary = LaundryHubColors.primaryVivid;
   static const primaryPale = LaundryHubColors.primaryPale;
-  static const navy        = LaundryHubColors.textPrimary;
-  static const slate       = LaundryHubColors.textSecondary;
-  static const muted       = LaundryHubColors.textSubtle;
-  static const border      = LaundryHubColors.borderSoft;
-  static const surface     = LaundryHubColors.surfaceSoft;
-  static const green       = LaundryHubColors.success;
-  static const greenLight  = LaundryHubColors.successSoft;
-  static const amber       = LaundryHubColors.warning;
-  static const amberLight  = LaundryHubColors.warningSoft;
-  static const red         = LaundryHubColors.errorStrong;
-  static const redLight    = LaundryHubColors.errorSoft;
+  static const navy = LaundryHubColors.textPrimary;
+  static const slate = LaundryHubColors.textSecondary;
+  static const muted = LaundryHubColors.textSubtle;
+  static const border = LaundryHubColors.borderSoft;
+  static const surface = LaundryHubColors.surfaceSoft;
+  static const green = LaundryHubColors.success;
+  static const greenLight = LaundryHubColors.successSoft;
+  static const amber = LaundryHubColors.warning;
+  static const amberLight = LaundryHubColors.warningSoft;
+  static const pendingText = Color(0xFF0E7490);
+  static const pendingBg = Color(0xFFCFFAFE);
+  static const red = LaundryHubColors.errorStrong;
+  static const redLight = LaundryHubColors.errorSoft;
 }
 
 class MyOrdersScreen extends StatefulWidget {
@@ -28,24 +30,20 @@ class MyOrdersScreen extends StatefulWidget {
   State<MyOrdersScreen> createState() => _MyOrdersScreenState();
 }
 
-class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObserver {
-    // Removed emoji mapping - using ServiceService.getServiceIcon() instead
-    String _getServiceEmoji(String serviceType) {
-      // This method is kept for backward compatibility but returns empty string
-      // Icons are now displayed using Material Design icons
-      return '';
-    }
+class _MyOrdersScreenState extends State<MyOrdersScreen>
+    with WidgetsBindingObserver {
   List<dynamic> _orders = [];
   bool _isLoading = true;
   String? _errorMessage;
   String _activeFilter = 'all';
-  AppLifecycleState? _lastLifecycleState;
+
+  DateTime? _lastLoaded;
 
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addObserver(this);
-    _loadOrders();
+    _loadOrders(force: true);
   }
 
   @override
@@ -56,15 +54,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
-    _lastLifecycleState = state;
-    // Refresh orders when app comes back to foreground
+    // Refresh orders when app comes back to foreground, if stale
     if (state == AppLifecycleState.resumed) {
-      debugPrint('App resumed - refreshing customer orders on MyOrdersScreen');
-      _loadOrders();
+      _loadOrders(force: false);
     }
   }
 
-  Future<void> _loadOrders() async {
+  Future<void> _loadOrders({bool force = true}) async {
+    final now = DateTime.now();
+
+    // If not forced and data is fresh (< 30 seconds), don't hit the API again
+    if (!force &&
+        _lastLoaded != null &&
+        now.difference(_lastLoaded!).inSeconds < 30) {
+      return;
+    }
+
     setState(() {
       _isLoading = true;
       _errorMessage = null;
@@ -77,6 +82,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     if (result['success'] == true) {
       setState(() {
         _orders = result['data'] as List<dynamic>;
+        _lastLoaded = DateTime.now();
         _isLoading = false;
       });
     } else {
@@ -116,9 +122,24 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     if (dateString == null) return 'N/A';
     try {
       final date = DateTime.parse(dateString);
-      final months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      final hour = date.hour > 12 ? date.hour - 12 : (date.hour == 0 ? 12 : date.hour);
-      final min  = date.minute.toString().padLeft(2, '0');
+      final months = [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
+      ];
+      final hour = date.hour > 12
+          ? date.hour - 12
+          : (date.hour == 0 ? 12 : date.hour);
+      final min = date.minute.toString().padLeft(2, '0');
       final ampm = date.hour >= 12 ? 'PM' : 'AM';
       return '${months[date.month - 1]} ${date.day.toString().padLeft(2, '0')}, ${date.year} \u2022 ${hour.toString().padLeft(2, '0')}:$min $ampm';
     } catch (e) {
@@ -128,13 +149,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
 
   String _formatServiceType(String serviceType) {
     if (serviceType.isEmpty) return 'Unknown Service';
-    
+
     // Trim and normalize underscores to spaces
     String cleaned = serviceType.replaceAll('_', ' ').trim();
-    
+
     // Check if original contains hyphens
     bool hasHyphens = cleaned.contains('-');
-    
+
     if (hasHyphens) {
       // For hyphenated services like "Wash-Dry-Fold"
       return cleaned
@@ -142,7 +163,8 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           .map((part) {
             String trimmed = part.trim();
             if (trimmed.isEmpty) return '';
-            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+            return trimmed[0].toUpperCase() +
+                trimmed.substring(1).toLowerCase();
           })
           .join('-');
     } else {
@@ -152,42 +174,86 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           .map((part) {
             String trimmed = part.trim();
             if (trimmed.isEmpty) return '';
-            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+            return trimmed[0].toUpperCase() +
+                trimmed.substring(1).toLowerCase();
           })
           .join(' ');
     }
   }
 
-  //  Design-system status helpers 
+  //  Design-system status helpers
 
   Color _statusTextColor(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return _M.amber;
-      case 'in_progress': case 'processing': case 'ongoing': return _M.primary;
-      case 'ready': return _M.green;
-      case 'completed': return _M.muted;
-      default: return _M.red;
+      case 'pending':
+        return _M.pendingText;
+      case 'in_progress':
+      case 'processing':
+      case 'ongoing':
+        return _M.primary;
+      case 'ready':
+        return _M.green;
+      case 'completed':
+        return _M.muted;
+      default:
+        return _M.red;
     }
   }
 
   Color _statusBgColor(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return _M.amberLight;
-      case 'in_progress': case 'processing': case 'ongoing': return _M.primaryPale;
-      case 'ready': return _M.greenLight;
-      case 'completed': return _M.surface;
-      default: return _M.redLight;
+      case 'pending':
+        return _M.pendingBg;
+      case 'in_progress':
+      case 'processing':
+      case 'ongoing':
+        return _M.primaryPale;
+      case 'ready':
+        return _M.greenLight;
+      case 'completed':
+        return _M.surface;
+      default:
+        return _M.redLight;
     }
   }
 
   String _statusLabel(String s) {
     switch (s.toLowerCase()) {
-      case 'pending': return 'Pending';
-      case 'in_progress': case 'processing': case 'ongoing': return 'Ongoing';
-      case 'ready': return 'Ready';
-      case 'completed': return 'Completed';
-      case 'cancelled': case 'declined': return 'Declined';
-      default: return _formatStatus(s);
+      case 'pending':
+        return 'Pending';
+      case 'in_progress':
+      case 'processing':
+      case 'ongoing':
+        return 'Ongoing';
+      case 'ready':
+        return 'Ready';
+      case 'completed':
+        return 'Completed';
+      case 'cancelled':
+      case 'declined':
+        return 'Declined';
+      default:
+        return _formatStatus(s);
+    }
+  }
+
+  IconData? _statusIcon(String status) {
+    switch (status.toLowerCase()) {
+      case 'completed':
+        return Icons.check_circle_outline;
+      case 'pending':
+        return Icons.access_time_rounded;
+      case 'ongoing':
+      case 'in_progress':
+      case 'processing':
+        return Icons.sync_rounded;
+      case 'ready':
+        return Icons.done_all_rounded;
+      case 'cancelled':
+      case 'declined':
+        return Icons.cancel_outlined;
+      default:
+        return null;
     }
   }
 
@@ -200,37 +266,42 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     child: Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (status.toLowerCase() == 'completed')
-          const Padding(
-            padding: EdgeInsets.only(right: 4),
-            child: Text('?', style: TextStyle(
-              fontSize: 11, fontWeight: FontWeight.w600, color: _M.green)),
-          ),
+        if (_statusIcon(status) != null) ...[
+          Icon(_statusIcon(status)!, size: 11, color: _statusTextColor(status)),
+          const SizedBox(width: 3),
+        ],
         Text(
           _statusLabel(status),
           style: GoogleFonts.dmSans(
-            fontSize: 11, fontWeight: FontWeight.w600,
-            color: _statusTextColor(status)),
+            fontSize: 11,
+            fontWeight: FontWeight.w600,
+            color: _statusTextColor(status),
+          ),
         ),
       ],
     ),
   );
 
-  //  Filter logic 
+  //  Filter logic
 
   bool _matchesFilter(Map<String, dynamic> order) {
     if (_activeFilter == 'all') return true;
     final s = (order['status'] ?? '').toString().toLowerCase();
     switch (_activeFilter) {
-      case 'pending': return s == 'pending';
-      case 'ongoing': return s == 'in_progress' || s == 'processing' || s == 'ongoing';
-      case 'ready': return s == 'ready';
-      case 'completed': return s == 'completed' || s == 'cancelled';
-      default: return true;
+      case 'pending':
+        return s == 'pending';
+      case 'ongoing':
+        return s == 'in_progress' || s == 'processing' || s == 'ongoing';
+      case 'ready':
+        return s == 'ready';
+      case 'completed':
+        return s == 'completed' || s == 'cancelled';
+      default:
+        return true;
     }
   }
 
-  //  Build 
+  //  Build
 
   @override
   Widget build(BuildContext context) {
@@ -251,7 +322,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 
-  //  App bar 
+  //  App bar
 
   Widget _buildAppBar() {
     return Container(
@@ -268,15 +339,23 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
             children: [
               Expanded(
                 child: Center(
-                  child: Text('My Orders',
+                  child: Text(
+                    'My Orders',
                     style: GoogleFonts.outfit(
-                      fontSize: 18, fontWeight: FontWeight.w700, color: _M.navy)),
+                      fontSize: 18,
+                      fontWeight: FontWeight.w700,
+                      color: _M.navy,
+                    ),
+                  ),
                 ),
               ),
               IconButton(
                 onPressed: () {},
-                icon: const Icon(Icons.search_rounded,
-                  size: 22, color: _M.slate),
+                icon: const Icon(
+                  Icons.search_rounded,
+                  size: 22,
+                  color: _M.slate,
+                ),
               ),
             ],
           ),
@@ -285,7 +364,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 
-  //  Filter chips 
+  //  Filter chips
 
   Widget _buildFilterChips() {
     const filters = ['All', 'Pending', 'Ongoing', 'Ready', 'Completed'];
@@ -304,7 +383,10 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                 onTap: () => setState(() => _activeFilter = key),
                 child: AnimatedContainer(
                   duration: const Duration(milliseconds: 150),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 7,
+                  ),
                   decoration: BoxDecoration(
                     color: isActive ? _M.primary : Colors.white,
                     borderRadius: BorderRadius.circular(20),
@@ -312,10 +394,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                         ? null
                         : Border.all(color: _M.border, width: 1.5),
                   ),
-                  child: Text(label,
+                  child: Text(
+                    label,
                     style: GoogleFonts.dmSans(
-                      fontSize: 11.5, fontWeight: FontWeight.w600,
-                      color: isActive ? Colors.white : _M.muted)),
+                      fontSize: 11.5,
+                      fontWeight: FontWeight.w600,
+                      color: isActive ? Colors.white : _M.muted,
+                    ),
+                  ),
                 ),
               ),
             );
@@ -325,12 +411,11 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 
-  //  Body 
+  //  Body
 
   Widget _buildBody(List<Map<String, dynamic>> filtered) {
     if (_isLoading) {
-      return const Center(
-        child: CircularProgressIndicator(color: _M.primary));
+      return const Center(child: CircularProgressIndicator(color: _M.primary));
     }
     if (_errorMessage != null) {
       return Center(
@@ -339,27 +424,44 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Icon(Icons.error_outline, size: 64, color: Colors.grey.shade400),
+              Icon(
+                Icons.error_outline,
+                size: 64,
+                color: LaundryHubColors.textSubtle,
+              ),
               const SizedBox(height: 16),
-              Text(_errorMessage!, textAlign: TextAlign.center,
+              Text(
+                _errorMessage!,
+                textAlign: TextAlign.center,
                 style: GoogleFonts.dmSans(
-                  fontSize: 16, color: Colors.grey.shade600)),
+                  fontSize: 16,
+                  color: LaundryHubColors.textMuted,
+                ),
+              ),
               const SizedBox(height: 24),
               GestureDetector(
                 onTap: _loadOrders,
                 child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 24, vertical: 12),
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
                   decoration: BoxDecoration(
                     color: _M.primary,
-                    borderRadius: BorderRadius.circular(12)),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const Icon(Icons.refresh, color: Colors.white, size: 18),
                       const SizedBox(width: 8),
-                      Text('Retry', style: GoogleFonts.dmSans(
-                        color: Colors.white, fontWeight: FontWeight.w600)),
+                      Text(
+                        'Retry',
+                        style: GoogleFonts.dmSans(
+                          color: Colors.white,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -379,17 +481,30 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
               Container(
                 padding: const EdgeInsets.all(24),
                 decoration: const BoxDecoration(
-                  color: _M.primaryPale, shape: BoxShape.circle),
-                child: const Icon(Icons.shopping_bag_outlined,
-                  size: 64, color: _M.primary),
+                  color: _M.primaryPale,
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  Icons.shopping_bag_outlined,
+                  size: 64,
+                  color: _M.primary,
+                ),
               ),
               const SizedBox(height: 24),
-              Text('No orders yet', style: GoogleFonts.outfit(
-                fontSize: 20, fontWeight: FontWeight.w700, color: _M.navy)),
+              Text(
+                'No orders yet',
+                style: GoogleFonts.outfit(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w700,
+                  color: _M.navy,
+                ),
+              ),
               const SizedBox(height: 8),
-              Text('Place your first laundry order to get started!',
+              Text(
+                'Place your first laundry order to get started!',
                 textAlign: TextAlign.center,
-                style: GoogleFonts.dmSans(fontSize: 14, color: _M.muted)),
+                style: GoogleFonts.dmSans(fontSize: 14, color: _M.muted),
+              ),
             ],
           ),
         ),
@@ -406,7 +521,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 
-  //  Order card 
+  //  Order card
 
   Widget _buildOrderCard(Map<String, dynamic> order) {
     final status = (order['status'] ?? 'pending').toString().toLowerCase();
@@ -415,16 +530,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     final svcName = _formatServiceType(serviceType);
     // Get icon from service name
     final icon = ServiceService.getServiceIcon(serviceType);
-    final isActive = status == 'ongoing' || status == 'pending' ||
-        status == 'ready' || status == 'in_progress' || status == 'processing';
+    final isActive =
+        status == 'ongoing' ||
+        status == 'pending' ||
+        status == 'ready' ||
+        status == 'in_progress' ||
+        status == 'processing';
     final isCompleted = status == 'completed' || status == 'cancelled';
 
     // Step progress
     const steps = ['Received', 'Washing', 'Drying', 'Ready'];
-    final activeIdx = status == 'pending' ? 0
-        : (status == 'in_progress' || status == 'processing' || status == 'ongoing') ? 1
-        : status == 'ready' ? 3
-        : status == 'completed' ? 4
+    final activeIdx = status == 'pending'
+        ? 0
+        : (status == 'in_progress' ||
+              status == 'processing' ||
+              status == 'ongoing')
+        ? 1
+        : status == 'ready'
+        ? 3
+        : status == 'completed'
+        ? 4
         : 0;
 
     return GestureDetector(
@@ -435,9 +560,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
           color: Colors.white,
           borderRadius: BorderRadius.circular(18),
           border: Border.all(color: _M.border, width: 1.5),
-          boxShadow: [BoxShadow(
-            color: LaundryHubColors.textPrimary.withOpacity(0.05),
-            blurRadius: 12, offset: const Offset(0, 3))],
+          boxShadow: [
+            BoxShadow(
+              color: LaundryHubColors.textPrimary.withValues(alpha: 0.05),
+              blurRadius: 12,
+              offset: const Offset(0, 3),
+            ),
+          ],
         ),
         child: Padding(
           padding: const EdgeInsets.all(16),
@@ -454,12 +583,22 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                   Expanded(
                     child: Row(
                       children: [
-                        Text(orderId, style: GoogleFonts.outfit(
-                          fontSize: 13, fontWeight: FontWeight.w800,
-                          color: _M.primary)),
+                        Text(
+                          orderId,
+                          style: GoogleFonts.outfit(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
+                            color: _M.primary,
+                          ),
+                        ),
                         const SizedBox(width: 4),
-                        Text('\u00B7 $svcName', style: GoogleFonts.dmSans(
-                          fontSize: 12, color: _M.slate)),
+                        Text(
+                          '\u00B7 $svcName',
+                          style: GoogleFonts.dmSans(
+                            fontSize: 12,
+                            color: _M.slate,
+                          ),
+                        ),
                       ],
                     ),
                   ),
@@ -471,19 +610,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
               // Info row
               Row(
                 children: [
-                  _infoItem(Icons.calendar_today_outlined,
-                    order['delivery_type'] == 'delivery' 
-                      ? _fmtShortDate(order['delivery_date'])
-                      : _fmtShortDate(order['pickup_date'])),
+                  _infoItem(
+                    Icons.calendar_today_outlined,
+                    order['delivery_type'] == 'delivery'
+                        ? _fmtShortDate(order['delivery_date'])
+                        : _fmtShortDate(order['pickup_date']),
+                  ),
                   const SizedBox(width: 16),
-                  _infoItem(Icons.scale_outlined,
-                    '${order['weight_kg'] ?? ''} kg'),
+                  _infoItem(
+                    Icons.scale_outlined,
+                    '${order['weight_kg'] ?? ''} kg',
+                  ),
                   const SizedBox(width: 16),
                   _infoItem(
                     order['delivery_type'] == 'delivery'
                         ? Icons.directions_walk_outlined
                         : Icons.two_wheeler_outlined,
-                    order['delivery_type'] == 'delivery' ? 'Drop-off' : 'Pickup'),
+                    order['delivery_type'] == 'delivery'
+                        ? 'Drop-off'
+                        : 'Pickup',
+                  ),
                 ],
               ),
 
@@ -492,8 +638,14 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                 const SizedBox(height: 12),
                 const Divider(height: 1, color: _M.border),
                 const SizedBox(height: 12),
-                Text('Order Progress', style: GoogleFonts.dmSans(
-                  fontSize: 10.5, fontWeight: FontWeight.w700, color: _M.muted)),
+                Text(
+                  'Order Progress',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.w700,
+                    color: _M.muted,
+                  ),
+                ),
                 const SizedBox(height: 8),
                 Row(
                   children: List.generate(steps.length * 2 - 1, (i) {
@@ -513,24 +665,33 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                     return Column(
                       children: [
                         Container(
-                          width: 10, height: 10,
+                          width: 12,
+                          height: 12,
                           decoration: BoxDecoration(
-                            color: isDoneDot ? _M.green
-                                : isActiveDot ? _M.primary
-                                : Colors.transparent,
+                            color: isDoneDot
+                                ? _M.green
+                                : isActiveDot
+                                ? _M.primary
+                                : _M.border,
                             shape: BoxShape.circle,
                             border: Border.all(
-                              color: isDoneDot ? _M.green
-                                  : isActiveDot ? _M.primary
+                              color: isDoneDot
+                                  ? _M.green
+                                  : isActiveDot
+                                  ? _M.primary
                                   : _M.border,
                               width: 1.5,
                             ),
                           ),
                         ),
                         const SizedBox(height: 4),
-                        Text(steps[idx], style: GoogleFonts.dmSans(
-                          fontSize: 8,
-                          color: isActiveDot ? _M.primary : _M.muted)),
+                        Text(
+                          steps[idx],
+                          style: GoogleFonts.dmSans(
+                            fontSize: 8,
+                            color: isActiveDot ? _M.primary : _M.muted,
+                          ),
+                        ),
                       ],
                     );
                   }),
@@ -550,23 +711,20 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                           ? 'Total: \u20B1${double.tryParse(order['total_price'].toString())?.toStringAsFixed(2) ?? ''}'
                           : 'Total: ',
                       style: GoogleFonts.dmSans(
-                        fontSize: 12, fontWeight: FontWeight.w700,
-                        color: _M.navy)),
-                    if (status == 'completed')
-                      Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline,
-                            size: 13, color: _M.green),
-                          const SizedBox(width: 4),
-                          Text('Completed', style: GoogleFonts.dmSans(
-                            fontSize: 11, fontWeight: FontWeight.w700,
-                            color: _M.green)),
-                        ],
-                      )
-                    else
-                      Text('Cancelled', style: GoogleFonts.dmSans(
-                        fontSize: 11, fontWeight: FontWeight.w700,
-                        color: _M.red)),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: _M.navy,
+                      ),
+                    ),
+                    if (status != 'completed')
+                      Text(
+                        'Cancelled',
+                        style: GoogleFonts.dmSans(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: _M.red,
+                        ),
+                      ),
                   ],
                 ),
               ],
@@ -591,14 +749,26 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     try {
       final dt = DateTime.parse(d.toString());
       const months = [
-        'Jan','Feb','Mar','Apr','May','Jun',
-        'Jul','Aug','Sep','Oct','Nov','Dec'
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec',
       ];
       return '${months[dt.month - 1]} ${dt.day}, ${dt.year}';
-    } catch (_) { return d.toString(); }
+    } catch (_) {
+      return d.toString();
+    }
   }
 
-  //  Order details bottom sheet 
+  //  Order details bottom sheet
 
   Future<void> _showOrderDetails(Map<String, dynamic> order) async {
     await showModalBottomSheet(
@@ -622,7 +792,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: Colors.grey.shade300,
+                color: LaundryHubColors.borderNeutral,
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -635,11 +805,13 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                   Container(
                     padding: const EdgeInsets.all(12),
                     decoration: BoxDecoration(
-                      color: LaundryHubColors.primary.withOpacity(0.1),
+                      color: LaundryHubColors.primary.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
                     child: Icon(
-                      ServiceService.getServiceIcon(order['service_type'] ?? ''),
+                      ServiceService.getServiceIcon(
+                        order['service_type'] ?? '',
+                      ),
                       size: 28,
                       color: LaundryHubColors.primary,
                     ),
@@ -661,7 +833,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                           'Order #${order['id']}',
                           style: TextStyle(
                             fontSize: 14,
-                            color: Colors.grey.shade600,
+                            color: LaundryHubColors.textMuted,
                           ),
                         ),
                       ],
@@ -685,14 +857,19 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                     Row(
                       children: [
                         Icon(
-                          ServiceService.getServiceIcon(order['service_type'] ?? ''),
+                          ServiceService.getServiceIcon(
+                            order['service_type'] ?? '',
+                          ),
                           size: 22,
                           color: _M.primary,
                         ),
                         const SizedBox(width: 10),
                         Text(
                           _formatServiceType(order['service_type'] ?? ''),
-                          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ],
                     ),
@@ -701,7 +878,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                       'Status',
                       _formatStatus(order['status'] ?? ''),
                       Icons.info_outline,
-                      valueColor: Color(int.parse(_getStatusColor(order['status'] ?? ''))),
+                      valueColor: Color(
+                        int.parse(_getStatusColor(order['status'] ?? '')),
+                      ),
                     ),
                     const SizedBox(height: 16),
                     _buildDetailRow(
@@ -722,7 +901,9 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                       Icons.local_shipping_outlined,
                     ),
                     if (order['special_instructions'] != null &&
-                        order['special_instructions'].toString().isNotEmpty) ...[
+                        order['special_instructions']
+                            .toString()
+                            .isNotEmpty) ...[
                       const SizedBox(height: 16),
                       _buildDetailRow(
                         'Special Instructions',
@@ -741,7 +922,12 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 
-  Widget _buildDetailRow(String label, String value, IconData icon, {Color? valueColor}) {
+  Widget _buildDetailRow(
+    String label,
+    String value,
+    IconData icon, {
+    Color? valueColor,
+  }) {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -755,7 +941,7 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
                 label,
                 style: TextStyle(
                   fontSize: 12,
-                  color: Colors.grey.shade600,
+                  color: LaundryHubColors.textMuted,
                 ),
               ),
               const SizedBox(height: 4),
@@ -774,5 +960,3 @@ class _MyOrdersScreenState extends State<MyOrdersScreen> with WidgetsBindingObse
     );
   }
 }
-
-
