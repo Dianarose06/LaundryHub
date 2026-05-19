@@ -52,14 +52,10 @@ class OrderController extends Controller
         $orderType = in_array($deliveryType, ['dropoff', 'delivery'], true)
             ? 'dropoff'
             : 'pickup';
-        $pickupFee = 0.0;
-        $deliveryFee = $orderType === 'pickup'
-            ? self::FIXED_PICKUP_DELIVERY_FEE
-            : 0.0;
+        $pickupFee = $orderType === 'pickup' ? $basePickupFee : 0.0;
+        $deliveryFee = $baseDeliveryFee;
 
-        $feeZone = $barangay
-            ? (string) $barangay->zone
-            : '0';
+        $feeZone = $barangay ? 'Zone ' . $barangay->zone : '0';
 
         return [
             'pickup_fee' => round($pickupFee, 2),
@@ -165,20 +161,20 @@ class OrderController extends Controller
     private function getServiceEmoji(string $serviceName): string
     {
         $normalized = strtolower(trim($serviceName));
-        
-        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash–dry–fold')) {
-            return '🧺';
+
+        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash�dry�fold')) {
+            return "\u{1F9FA}";
         } elseif (str_contains($normalized, 'dry cleaning')) {
-            return '✨';
+            return "\u{2728}";
         } elseif (str_contains($normalized, 'beddings')) {
-            return '🛏️';
+            return "\u{1F6CF}\u{FE0F}";
         } elseif (str_contains($normalized, 'express wash')) {
-            return '⚡';
+            return "\u{26A1}";
         } elseif (str_contains($normalized, 'soft wash')) {
-            return '🌸';
+            return "\u{1F338}";
         }
-        
-        return '🧺'; // Default
+
+        return "\u{1F9FA}";
     }
 
     public function index(Request $request)
@@ -288,7 +284,7 @@ class OrderController extends Controller
             ], 422);
         }
 
-        if ($orderType === 'pickup' && !empty($validated['pickup_barangay_id'])) {
+        if (!empty($validated['pickup_barangay_id'])) {
             $pickupBarangay = Barangay::query()
                 ->active()
                 ->where('city', self::TACLOBAN_CITY)
@@ -308,7 +304,7 @@ class OrderController extends Controller
         $service = Service::findOrFail($validated['service_id']);
         $deliveryType = $orderType === 'pickup' ? 'pickup' : 'delivery';
         $fees = $this->calculateLogisticsFees($orderType, $pickupBarangay);
-        $basePrice = 0.00;
+        $basePrice = (float) $service->price_per_kg;
 
         $addOnIds = $validated['add_ons'] ?? [];
         $addOnServices = collect();
@@ -342,6 +338,7 @@ class OrderController extends Controller
         $totalPrice = round(
             $basePrice
             + $addOnTotal
+            + (float) $fees['pickup_fee']
             + (float) $fees['delivery_fee'],
             2
         );
@@ -432,3 +429,4 @@ class OrderController extends Controller
         ]);
     }
 }
+

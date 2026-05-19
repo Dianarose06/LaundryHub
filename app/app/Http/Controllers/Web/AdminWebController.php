@@ -296,15 +296,17 @@ class AdminWebController extends Controller
     {
         $params = [
             'status' => $request->input('status', $request->query('status', 'all')),
-            'add_on_service_filter' => $request->input(
-                'add_on_service_filter',
-                $request->query('add_on_service_filter', 'all')
-            ),
-            'add_on_active_filter' => $request->input(
-                'add_on_active_filter',
-                $request->query('add_on_active_filter', 'all')
-            ),
         ];
+
+        $serviceFilter = $request->input('add_on_service_filter', $request->query('add_on_service_filter'));
+        if ($serviceFilter !== null && $serviceFilter !== '') {
+            $params['add_on_service_filter'] = $serviceFilter;
+        }
+
+        $activeFilter = $request->input('add_on_active_filter', $request->query('add_on_active_filter'));
+        if ($activeFilter !== null && $activeFilter !== '') {
+            $params['add_on_active_filter'] = $activeFilter;
+        }
 
         $addOnPage = $request->input('add_on_page', $request->query('add_on_page'));
         if ($addOnPage !== null && $addOnPage !== '') {

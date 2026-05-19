@@ -25,6 +25,7 @@ class Order extends Model
         'delivery_fee',
         'fee_zone',
         'status',
+        'completed_at',
         'pickup_address',
         'pickup_barangay_id',
         'pickup_city',
@@ -48,6 +49,7 @@ class Order extends Model
             'add_on_total' => 'decimal:2',
             'pickup_fee' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
+            'completed_at' => 'datetime',
         ];
     }
 

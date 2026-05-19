@@ -220,19 +220,28 @@ class AdminController extends Controller
     {
         $normalized = strtolower(trim($serviceName));
 
-        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash-dry-fold')) {
-            return 'WDF';
+        if (str_contains($normalized, 'wash-dry-fold') || str_contains($normalized, 'wash–dry–fold')) {
+            return "\u{1F9FA}";
         } elseif (str_contains($normalized, 'dry cleaning')) {
-            return 'DRY';
+            return "\u{2728}";
         } elseif (str_contains($normalized, 'beddings')) {
-            return 'BED';
+            return "\u{1F6CF}\u{FE0F}";
         } elseif (str_contains($normalized, 'express wash')) {
-            return 'EXP';
+            return "\u{26A1}";
         } elseif (str_contains($normalized, 'soft wash')) {
-            return 'SOFT';
+            return "\u{1F338}";
         }
 
-        return 'WDF';
+        return "\u{1F9FA}";
+    }
+
+    private function percentageChange(float $current, float $previous): ?int
+    {
+        if ($previous == 0.0) {
+            return $current > 0.0 ? 100 : null;
+        }
+
+        return (int) round((($current - $previous) / $previous) * 100);
     }
 
     public function stats(Request $request)
@@ -242,13 +251,18 @@ class AdminController extends Controller
         $today = Carbon::today();
         $amountExpression = $this->orderAmountExpression();
 
+        $revenueQuery = DB::table('orders')
+            ->where('status', 'completed');
+        if (Schema::hasColumn('orders', 'completed_at')) {
+            $revenueQuery->whereDate('completed_at', $today);
+        } else {
+            $revenueQuery->whereDate('created_at', $today);
+        }
+
         $stats = [
             'total_bookings' => Order::count(),
             'pending_count'  => Order::where('status', 'pending')->count(),
-            'revenue_today'  => (float) $this->applyNotCancelledFilter(
-                DB::table('orders')->whereDate('created_at', $today),
-                'status',
-            )->sum(DB::raw($amountExpression)),
+            'revenue_today'  => (float) $revenueQuery->sum(DB::raw($amountExpression)),
             'customer_count' => $this->customerRoleCount(),
         ];
 
@@ -424,7 +438,13 @@ class AdminController extends Controller
         $awardedPoints = 0;
 
         if ($previousStatus !== $nextStatus) {
-            $order->update(['status' => $nextStatus]);
+            $updatePayload = ['status' => $nextStatus];
+            if ($nextStatus === 'completed') {
+                $updatePayload['completed_at'] = now();
+            } elseif ($previousStatus === 'completed') {
+                $updatePayload['completed_at'] = null;
+            }
+            $order->update($updatePayload);
 
             $this->sendOrderStatusEmail($order, $previousStatus, $nextStatus);
 
