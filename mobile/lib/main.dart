@@ -5,6 +5,7 @@ import 'screens/main_shell.dart';
 import 'screens/edit_profile_screen.dart';
 import 'services/auth_service.dart';
 import 'models/profile_model.dart';
+import 'theme/laundryhub_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -30,11 +31,8 @@ class LaundryHubApp extends StatelessWidget {
     return MaterialApp(
       title: 'LaundryHub',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF1565C0)),
-        useMaterial3: true,
-      ),
-      home: const _SplashGate(),
+      theme: LaundryHubTheme.light(),
+      home: _SplashGate(),
       onGenerateRoute: (settings) {
         if (settings.name == '/edit-profile') {
           final args = settings.arguments as CustomerProfile?;
@@ -60,63 +58,87 @@ class _SplashGateState extends State<_SplashGate> {
   @override
   void initState() {
     super.initState();
-    _checkAuth();
+    // Run auth check and minimum brand display in parallel.
+    // Navigate as soon as BOTH are done — no unnecessary waiting.
+    _initApp();
   }
 
-  Future<void> _checkAuth() async {
-    final token = await AuthService.getToken();
+  Future<void> _initApp() async {
+    // Run auth check and a 2.5 second minimum brand display concurrently.
+    // This keeps launch feeling polished while still resolving auth in parallel.
+    final results = await Future.wait([
+      _resolveAuthDestination(),
+      Future.delayed(const Duration(milliseconds: 2500)),
+    ]);
+
     if (!mounted) return;
 
-    if (token != null && token.isNotEmpty) {
-      final role = await AuthService.getRole();
-      if (!mounted) return;
+    final destination = results[0] as Widget;
 
-      if (role == 'admin') {
-        await AuthService.logout();
-        if (!mounted) return;
-        Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (_) => const LoginScreen()),
-        );
-        return;
+    Navigator.pushReplacement(
+      context,
+      PageRouteBuilder(
+        pageBuilder: (_, a, b) => destination,
+        transitionDuration: const Duration(milliseconds: 300),
+        transitionsBuilder: (context, animation, secondaryAnimation, child) {
+          return FadeTransition(opacity: animation, child: child);
+        },
+      ),
+    );
+  }
+
+  Future<Widget> _resolveAuthDestination() async {
+    try {
+      final token = await AuthService.getToken();
+      final user = await AuthService.getUser();
+
+      if (token != null && user != null) {
+        final role = user['role']?.toString().toLowerCase() ?? 'user';
+        if (role == 'admin') {
+          await AuthService.logout();
+          return const LoginScreen();
+        }
+        return const MainShell();
       }
-
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const MainShell()),
-      );
-    } else {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const LoginScreen()),
-      );
+    } catch (_) {
+      // On any error, fall through to login
     }
+    return const LoginScreen();
   }
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Color(0xFF1565C0),
+    return Scaffold(
+      backgroundColor: LaundryHubColors.primary,
       body: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(
-              Icons.local_laundry_service_rounded,
-              size: 80,
+        child: SizedBox(
+          width: 220,
+          height: 220,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
               color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
             ),
-            SizedBox(height: 16),
-            Text(
-              'LaundryHub',
-              style: TextStyle(
-                color: Colors.white,
-                fontSize: 30,
-                fontWeight: FontWeight.bold,
-                letterSpacing: 1.5,
-              ),
+            child: Image.asset(
+              'assets/images/logo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.broken_image,
+                  size: 100,
+                  color: LaundryHubColors.primary,
+                );
+              },
             ),
-          ],
+          ),
         ),
       ),
     );

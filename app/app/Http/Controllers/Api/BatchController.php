@@ -30,18 +30,29 @@ class BatchController extends Controller
         );
         $includeServices = $includeServices ?? true;
 
-        $orders = $user->orders()
-            ->with('service')
+        // Single query: fetch orders with service eager-loaded (no N+1)
+        $allOrders = $user->orders()
+            ->with('service:id,name')
             ->latest()
             ->take($ordersLimit)
-            ->get()
+            ->get();
+
+        $orders = $allOrders
             ->map(fn (Order $order) => $this->transformOrder($order))
             ->values();
 
-        $activeOrdersCount = $user->orders()
-            ->whereIn('status', ['pending', 'ongoing', 'ready', 'in_progress', 'processing'])
-            ->count();
+        // Single aggregated query for ALL counts instead of 3 separate queries
+        $orderCounts = $user->orders()
+            ->selectRaw("
+                COUNT(*) as total_count,
+                SUM(CASE WHEN status IN ('pending','ongoing','ready','in_progress','processing') THEN 1 ELSE 0 END) as active_count
+            ")
+            ->first();
 
+        $totalOrdersCount  = (int) ($orderCounts->total_count ?? 0);
+        $activeOrdersCount = (int) ($orderCounts->active_count ?? 0);
+
+        // Single aggregated query for notification counts + recent rows
         $recentNotifications = Notification::where('user_id', $user->id)
             ->latest()
             ->take($notificationsLimit)
@@ -68,12 +79,13 @@ class BatchController extends Controller
                     'recent' => $recentNotifications,
                 ],
                 'meta' => [
-                    'orders_count' => $user->orders()->count(),
+                    'orders_count' => $totalOrdersCount,
                     'active_orders_count' => $activeOrdersCount,
                 ],
             ],
         ]);
     }
+
 
     /**
      * Customer profile payload in one request.

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
+import '../theme/laundryhub_theme.dart';
 import 'dart:async';
 
 class ForgotPasswordScreen extends StatefulWidget {
@@ -27,6 +29,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _resendTimer = 0;
   Timer? _timer;
   String _verificationCode = '';
+  static final RegExp _emailRegex = RegExp(
+    r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
+  );
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
 
   @override
   void dispose() {
@@ -72,9 +81,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Reset code sent to your email'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Future.delayed(const Duration(milliseconds: 300), () {
@@ -84,9 +95,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to send code'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -100,7 +113,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter all 6 digits'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -111,7 +124,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Passwords do not match'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
         ),
       );
@@ -133,9 +146,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Password reset successfully!'),
-          backgroundColor: Colors.green.shade700,
+          backgroundColor: LaundryHubColors.successDark,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
       Future.delayed(const Duration(seconds: 1), () {
@@ -145,9 +160,11 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(result['message'] ?? 'Failed to reset password'),
-          backgroundColor: Colors.red.shade700,
+          backgroundColor: LaundryHubColors.errorStrong,
           behavior: SnackBarBehavior.floating,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
         ),
       );
     }
@@ -156,12 +173,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F9FF),
+      backgroundColor: LaundryHubColors.pageBackground,
       appBar: AppBar(
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF2196F3)),
+          icon: const Icon(Icons.arrow_back, color: LaundryHubColors.primary),
           onPressed: () => Navigator.pop(context),
         ),
       ),
@@ -178,7 +195,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   style: TextStyle(
                     fontSize: 28,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1976D2),
+                    color: LaundryHubColors.primary,
                   ),
                 ),
                 const SizedBox(height: 8),
@@ -186,7 +203,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   'Enter your email to receive a reset code',
                   style: TextStyle(
                     fontSize: 16,
-                    color: Colors.grey.shade600,
+                    color: LaundryHubColors.textMuted,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -196,6 +213,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   controller: _emailController,
                   enabled: !_codeSent,
                   keyboardType: TextInputType.emailAddress,
+                  maxLength: 100,
+                  maxLines: 1,
+                  style: const TextStyle(overflow: TextOverflow.ellipsis),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(_emojiRegex),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Email Address',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -204,13 +227,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     filled: true,
                     fillColor: Colors.white,
+                    counterText: '',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Email is required';
                     }
-                    if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                    if (!_emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
@@ -225,7 +249,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _sendCode,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2196F3),
+                        backgroundColor: LaundryHubColors.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -256,7 +280,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF1976D2),
+                      color: LaundryHubColors.primary,
                     ),
                   ),
                   const SizedBox(height: 12),
@@ -269,8 +293,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           controller: _codeControllers[index],
                           focusNode: _codeFocusNodes[index],
                           textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
+                          keyboardType: TextInputType.phone,
                           maxLength: 1,
+                          maxLines: 1,
                           decoration: InputDecoration(
                             counterText: '',
                             border: OutlineInputBorder(
@@ -282,6 +307,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           onChanged: (value) {
                             if (value.isNotEmpty) {
@@ -306,7 +332,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     Center(
                       child: Text(
                         'Resend code in $_resendTimer seconds',
-                        style: TextStyle(color: Colors.grey.shade600),
+                        style: TextStyle(color: LaundryHubColors.textMuted),
                       ),
                     )
                   else
@@ -322,8 +348,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    maxLength: 64,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'New Password',
+                      helperText: 'Min. 8 characters, 1 uppercase, 1 number',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -340,13 +373,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      counterText: '',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Password is required';
                       }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters';
+                      if (!RegExp(r'^(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value)) {
+                        return 'Password must be at least 8 characters with 1 uppercase and 1 number';
                       }
                       return null;
                     },
@@ -357,6 +391,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
+                    maxLength: 64,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Confirm New Password',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -368,7 +408,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                         ),
                         onPressed: () {
                           setState(
-                              () => _obscureConfirmPassword = !_obscureConfirmPassword);
+                            () => _obscureConfirmPassword =
+                                !_obscureConfirmPassword,
+                          );
                         },
                       ),
                       border: OutlineInputBorder(
@@ -376,6 +418,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      counterText: '',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
@@ -396,7 +439,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     child: ElevatedButton(
                       onPressed: _isLoading ? null : _resetPassword,
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2196F3),
+                        backgroundColor: LaundryHubColors.primary,
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),

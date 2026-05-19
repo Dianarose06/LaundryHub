@@ -8,6 +8,8 @@ use Illuminate\Http\Request;
 
 class ServiceController extends Controller
 {
+    private const ALLOWED_CATEGORIES = ['Standard', 'Express', 'Premium', 'Basic', 'Specialty'];
+
     public function index()
     {
         $services = Service::where('is_active', true)->get();
@@ -19,7 +21,16 @@ class ServiceController extends Controller
     {
         $this->ensureAdmin($request);
 
-        $services = Service::orderBy('id')->get();
+        $search = trim((string) $request->query('search', ''));
+        $search = preg_replace('/\s+/', ' ', $search);
+        $search = trim((string) $search);
+
+        $services = Service::query()
+            ->when($search !== '', function ($query) use ($search) {
+                $query->whereRaw('LOWER(name) LIKE ?', ['%' . mb_strtolower($search) . '%']);
+            })
+            ->orderBy('id')
+            ->get();
 
         return response()->json(['data' => $services]);
     }
@@ -37,10 +48,18 @@ class ServiceController extends Controller
             'name'         => 'required|string|max:255',
             'description'  => 'nullable|string|max:1000',
             'price_per_kg' => 'required|numeric|min:0',
-            'category'     => 'nullable|string|max:100',
+            'category'     => 'nullable|string|in:' . implode(',', self::ALLOWED_CATEGORIES),
+            'image'        => 'nullable|image|max:5120',
             'image_url'    => 'nullable|url|max:500',
             'is_active'    => 'boolean',
         ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('services', 'public');
+            $validated['image_url'] = asset('storage/' . $path);
+        }
+
+        unset($validated['image']);
 
         $service = Service::create($validated);
 
@@ -55,10 +74,18 @@ class ServiceController extends Controller
             'name'         => 'sometimes|required|string|max:255',
             'description'  => 'nullable|string|max:1000',
             'price_per_kg' => 'sometimes|required|numeric|min:0',
-            'category'     => 'nullable|string|max:100',
+            'category'     => 'nullable|string|in:' . implode(',', self::ALLOWED_CATEGORIES),
+            'image'        => 'nullable|image|max:5120',
             'image_url'    => 'nullable|url|max:500',
             'is_active'    => 'boolean',
         ]);
+
+        if ($request->hasFile('image')) {
+            $path = $request->file('image')->store('services', 'public');
+            $validated['image_url'] = asset('storage/' . $path);
+        }
+
+        unset($validated['image']);
 
         $service->update($validated);
 

@@ -1,30 +1,13 @@
-import 'dart:typed_data';
 import 'package:flutter/foundation.dart';
-import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 
 import 'stub_io.dart' if (dart.library.io) 'real_io.dart';
 
 Uint8List _compressImageInBackground(Map<String, dynamic> input) {
-  final bytes = input['bytes'] as Uint8List;
-  final maxWidth = input['maxWidth'] as int;
-  final maxHeight = input['maxHeight'] as int;
-
-  var image = img.decodeImage(bytes);
-  if (image == null) {
-    throw 'Could not decode image. Please choose a JPG, JPEG, PNG, or GIF file.';
-  }
-
-  if (image.width > maxWidth || image.height > maxHeight) {
-    image = img.copyResize(
-      image,
-      width: image.width > image.height ? maxWidth : null,
-      height: image.height > image.width ? maxHeight : null,
-      interpolation: img.Interpolation.average,
-    );
-  }
-
-  return Uint8List.fromList(img.encodeJpg(image, quality: 85));
+  // Pure Dart image compression is disabled because it is incredibly slow
+  // on JIT debug builds (taking 10+ seconds) and unnecessary since
+  // ImagePicker natively hardware-compresses the image.
+  return input['bytes'] as Uint8List;
 }
 
 class ImageUploadService {
@@ -40,8 +23,8 @@ class ImageUploadService {
             'Current: ${(fileSize / 1024 / 1024).toStringAsFixed(2)}MB';
       }
 
-      final lower =
-          (image.name.isNotEmpty ? image.name : image.path).toLowerCase();
+      final lower = (image.name.isNotEmpty ? image.name : image.path)
+          .toLowerCase();
       if (!(lower.endsWith('.jpg') ||
           lower.endsWith('.jpeg') ||
           lower.endsWith('.png') ||
@@ -62,14 +45,11 @@ class ImageUploadService {
         return bytes;
       }
 
-      return compute(
-        _compressImageInBackground,
-        {
-          'bytes': bytes,
-          'maxWidth': maxWidth,
-          'maxHeight': maxHeight,
-        },
-      );
+      return compute(_compressImageInBackground, {
+        'bytes': bytes,
+        'maxWidth': maxWidth,
+        'maxHeight': maxHeight,
+      });
     } catch (e) {
       throw 'Failed to compress image: $e';
     }

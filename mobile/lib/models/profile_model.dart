@@ -42,24 +42,25 @@ class CustomerProfile {
   factory CustomerProfile.fromJson(Map<String, dynamic> json) {
     try {
       return CustomerProfile(
-        id: json['id'] as int? ?? 0,
-        name: json['name'] as String? ?? '',
-        email: json['email'] as String? ?? '',
-        phone: json['phone'] as String?,
-        profilePictureUrl: json['profile_picture_url'] as String?,
-        bio: json['bio'] as String?,
-        address: json['address'] as String?,
-        city: json['city'] as String?,
-        zipCode: json['zip_code'] as String?,
-        country: json['country'] as String?,
-        dateOfBirth: json['date_of_birth'] as String?,
-        gender: json['gender'] as String?,
-        preferredLanguage: json['preferred_language'] as String? ?? 'en',
-        notificationsEnabled: json['notifications_enabled'] == true || json['notifications_enabled'] == 1,
-        loyaltyPoints: json['loyalty_points'] as int? ?? 0,
-        emailVerifiedAt: json['email_verified_at'] as String?,
-        profileCompletedAt: json['profile_completed_at'] as String?,
-        createdAt: (json['created_at'] as String?) ?? DateTime.now().toIso8601String(),
+        id: _asInt(json['id']),
+        name: _asString(json['name']) ?? '',
+        email: _asString(json['email']) ?? '',
+        phone: _asString(json['phone']),
+        profilePictureUrl: _asString(json['profile_picture_url']),
+        bio: _asString(json['bio']),
+        address: _asString(json['address']),
+        city: _asString(json['city']),
+        zipCode: _asString(json['zip_code']),
+        country: _asString(json['country']),
+        dateOfBirth: _asString(json['date_of_birth']),
+        gender: _asString(json['gender']),
+        preferredLanguage: _asString(json['preferred_language']) ?? 'en',
+        notificationsEnabled: _asBool(json['notifications_enabled']),
+        loyaltyPoints: _asInt(json['loyalty_points']),
+        emailVerifiedAt: _asString(json['email_verified_at']),
+        profileCompletedAt: _asString(json['profile_completed_at']),
+        createdAt:
+            _asString(json['created_at']) ?? DateTime.now().toIso8601String(),
       );
     } catch (e) {
       throw Exception('Error parsing profile: $e. Data: $json');
@@ -134,6 +135,25 @@ class CustomerProfile {
   bool isProfileComplete() {
     return profileCompletedAt != null;
   }
+
+  static int _asInt(dynamic value) {
+    if (value is int) return value;
+    if (value is num) return value.toInt();
+    return int.tryParse(value?.toString() ?? '') ?? 0;
+  }
+
+  static bool _asBool(dynamic value) {
+    if (value is bool) return value;
+    if (value is num) return value != 0;
+
+    final normalized = value?.toString().toLowerCase().trim();
+    return normalized == 'true' || normalized == '1' || normalized == 'yes';
+  }
+
+  static String? _asString(dynamic value) {
+    if (value == null) return null;
+    return value.toString();
+  }
 }
 
 class ProfileCompletionStatus {
@@ -153,11 +173,20 @@ class ProfileCompletionStatus {
 
   factory ProfileCompletionStatus.fromJson(Map<String, dynamic> json) {
     return ProfileCompletionStatus(
-      completedPercentage: json['completed_percentage'] as int,
-      totalFields: json['total_fields'] as int,
-      completedFields: json['completed_fields'] as int,
-      fields: Map<String, bool>.from(json['fields'] as Map),
-      isProfileComplete: json['is_profile_complete'] as bool,
+      completedPercentage: CustomerProfile._asInt(json['completed_percentage']),
+      totalFields: CustomerProfile._asInt(json['total_fields']),
+      completedFields: CustomerProfile._asInt(json['completed_fields']),
+      fields: _asBoolMap(json['fields']),
+      isProfileComplete: CustomerProfile._asBool(json['is_profile_complete']),
+    );
+  }
+
+  static Map<String, bool> _asBoolMap(dynamic value) {
+    if (value is! Map) return {};
+
+    return value.map(
+      (key, mapValue) =>
+          MapEntry(key.toString(), CustomerProfile._asBool(mapValue)),
     );
   }
 }

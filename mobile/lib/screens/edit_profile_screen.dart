@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/laundryhub_theme.dart';
 import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
@@ -10,13 +11,17 @@ import '../models/profile_model.dart';
 class EditProfileScreen extends StatefulWidget {
   final CustomerProfile? profile;
 
-  const EditProfileScreen({Key? key, this.profile}) : super(key: key);
+  const EditProfileScreen({super.key, this.profile});
 
   @override
   State<EditProfileScreen> createState() => _EditProfileScreenState();
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
   late ProfileService _profileService;
   late TextEditingController _lastNameController;
   late TextEditingController _firstNameController;
@@ -190,7 +195,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text(validationError),
-              backgroundColor: Colors.red,
+              backgroundColor: LaundryHubColors.error,
             ),
           );
         }
@@ -254,7 +259,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile picture updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
           ),
         );
       }
@@ -268,7 +273,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to upload image: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -284,7 +289,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Last name and first name are required'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
       return;
@@ -295,7 +300,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Middle initial must be a single letter'),
-          backgroundColor: Colors.red,
+          backgroundColor: LaundryHubColors.error,
         ),
       );
       return;
@@ -332,7 +337,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Profile updated successfully'),
-            backgroundColor: Colors.green,
+            backgroundColor: LaundryHubColors.success,
           ),
         );
         Navigator.pop(context, true);
@@ -342,7 +347,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Failed to update profile: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: LaundryHubColors.error,
           ),
         );
       }
@@ -425,7 +430,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     controller: _middleInitialController,
                     textCapitalization: TextCapitalization.characters,
                     maxLength: 1,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
                     inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
                       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
                       LengthLimitingTextInputFormatter(1),
                     ],
@@ -458,6 +466,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               label: 'Phone Number',
               icon: Icons.phone,
               keyboardType: TextInputType.phone,
+              maxLength: 11,
             ),
             const SizedBox(height: 12),
             _buildTextField(
@@ -491,12 +500,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               controller: _addressController,
               label: 'Address',
               icon: Icons.location_on,
+              maxLines: 6,
+              maxLength: 150,
             ),
             const SizedBox(height: 12),
             _buildTextField(
               controller: _cityController,
               label: 'City',
               icon: Icons.location_city,
+              maxLength: 60,
             ),
             const SizedBox(height: 12),
             _buildTextField(
@@ -504,12 +516,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               label: 'Zip Code',
               icon: Icons.mail,
               keyboardType: TextInputType.number,
+              maxLength: 10,
             ),
             const SizedBox(height: 12),
             _buildTextField(
               controller: _countryController,
               label: 'Country',
               icon: Icons.public,
+              maxLength: 60,
             ),
             const SizedBox(height: 24),
 
@@ -590,8 +604,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     int? maxLength,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final inputFormatters = <TextInputFormatter>[
+      FilteringTextInputFormatter.deny(_emojiRegex),
+    ];
+    if (keyboardType == TextInputType.phone ||
+        keyboardType == TextInputType.number) {
+      inputFormatters.add(FilteringTextInputFormatter.digitsOnly);
+    }
+
     return TextField(
       controller: controller,
+      minLines: 1,
+      style: maxLines == 1
+          ? const TextStyle(overflow: TextOverflow.ellipsis)
+          : null,
       decoration: InputDecoration(
         labelText: isRequired ? '$label *' : label,
         prefixIcon: Icon(icon),
@@ -601,6 +627,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
     );
   }
 
@@ -631,7 +658,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     required Function(String?) onChanged,
   }) {
     return DropdownButtonFormField<String>(
-      value: value,
+      initialValue: value,
       decoration: InputDecoration(
         labelText: label,
         border: OutlineInputBorder(borderRadius: BorderRadius.circular(8)),

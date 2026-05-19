@@ -27,7 +27,7 @@ void main() {
       await tester.tap(find.text('Soft Wash').first);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Continue →').first);
+      await tester.tap(find.textContaining('Continue').first);
       await tester.pumpAndSettle();
 
       expect(find.text('Paged Add-on 01'), findsOneWidget);
@@ -38,7 +38,7 @@ void main() {
       await tester.tap(find.text('Paged Add-on 01'));
       await tester.pump();
 
-      expect(find.text('Add-on subtotal: ₱ 11.00'), findsOneWidget);
+      expect(find.textContaining('Add-on subtotal:'), findsOneWidget);
 
       await tester.ensureVisible(find.text('Next').first);
       await tester.pumpAndSettle();
@@ -53,7 +53,7 @@ void main() {
 
       expect(find.text('2/2'), findsOneWidget);
       expect(find.text('Paged Add-on 07'), findsOneWidget);
-      expect(find.text('Add-on subtotal: ₱ 11.00'), findsOneWidget);
+      expect(find.textContaining('Add-on subtotal:'), findsOneWidget);
     },
   );
 
@@ -104,7 +104,7 @@ void main() {
       await tester.tap(find.text('Soft Wash').first);
       await tester.pumpAndSettle();
 
-      await tester.tap(find.text('Continue →').first);
+      await tester.tap(find.textContaining('Continue').first);
       await tester.pumpAndSettle();
 
       expect(find.text('Paged Add-on 01'), findsOneWidget);

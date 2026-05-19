@@ -25,6 +25,7 @@ class Order extends Model
         'delivery_fee',
         'fee_zone',
         'status',
+        'completed_at',
         'pickup_address',
         'pickup_barangay_id',
         'pickup_city',
@@ -34,6 +35,8 @@ class Order extends Model
         'delivery_date',
         'delivery_time',
         'delivery_type',
+        'type',
+        'laundry_photo',
         'notes',
         'admin_notes',
     ];
@@ -46,6 +49,7 @@ class Order extends Model
             'add_on_total' => 'decimal:2',
             'pickup_fee' => 'decimal:2',
             'delivery_fee' => 'decimal:2',
+            'completed_at' => 'datetime',
         ];
     }
 
@@ -97,5 +101,27 @@ class Order extends Model
             ->withPivot('fee')
             ->withTimestamps();
     }
-}
 
+    public function scopeByStatus($query, $status)
+    {
+        return $query->where('status', $status);
+    }
+
+    public function scopeCompletedToday($query, $date = null)
+    {
+        $date = $date ?: Carbon::today();
+        return $query->where('status', 'completed')
+            ->whereDate('completed_at', $date);
+    }
+
+    public function scopePendingPickup($query)
+    {
+        return $query->where('status', 'pending')
+            ->where('delivery_type', 'pickup');
+    }
+
+    public function getDisplayIdAttribute()
+    {
+        return '#LH-' . str_pad((string) $this->id, 3, '0', STR_PAD_LEFT);
+    }
+}

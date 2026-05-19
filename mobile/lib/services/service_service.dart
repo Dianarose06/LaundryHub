@@ -11,17 +11,12 @@ class ServiceService {
     try {
       final response = await http.get(
         Uri.parse('$_baseUrl/services'),
-        headers: {
-          'Accept': 'application/json',
-        },
+        headers: {'Accept': 'application/json'},
       );
 
       if (response.statusCode == 200) {
         final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return {
-          'success': true,
-          'data': data['data'] as List<dynamic>? ?? [],
-        };
+        return {'success': true, 'data': data['data'] as List<dynamic>? ?? []};
       }
 
       return {
@@ -29,10 +24,7 @@ class ServiceService {
         'message': 'Failed to fetch services (${response.statusCode})',
       };
     } catch (e) {
-      return {
-        'success': false,
-        'message': 'Connection error: $e',
-      };
+      return {'success': false, 'message': 'Connection error: $e'};
     }
   }
 
@@ -40,9 +32,11 @@ class ServiceService {
   static String getServiceEmoji(String serviceName) {
     final normalized = serviceName.toLowerCase().trim();
 
-    if (normalized.contains('wash-dry-fold') || normalized.contains('wash–dry–fold')) {
+    if (normalized.contains('wash-dry-fold') ||
+        normalized.contains('wash–dry–fold')) {
       return '🧺';
-    } else if (normalized.contains('dry cleaning') || normalized.contains('dry clean')) {
+    } else if (normalized.contains('dry cleaning') ||
+        normalized.contains('dry clean')) {
       return '✨';
     } else if (normalized.contains('beddings')) {
       return '🛏️';
@@ -59,9 +53,11 @@ class ServiceService {
   static IconData getServiceIcon(String serviceName) {
     final normalized = serviceName.toLowerCase().trim();
 
-    if (normalized.contains('wash-dry-fold') || normalized.contains('wash–dry–fold')) {
+    if (normalized.contains('wash-dry-fold') ||
+        normalized.contains('wash–dry–fold')) {
       return Icons.local_laundry_service;
-    } else if (normalized.contains('dry cleaning') || normalized.contains('dry clean')) {
+    } else if (normalized.contains('dry cleaning') ||
+        normalized.contains('dry clean')) {
       return Icons.cleaning_services;
     } else if (normalized.contains('beddings')) {
       return Icons.bed;
@@ -88,7 +84,8 @@ class ServiceService {
           .map((part) {
             String trimmed = part.trim();
             if (trimmed.isEmpty) return '';
-            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+            return trimmed[0].toUpperCase() +
+                trimmed.substring(1).toLowerCase();
           })
           .join('-');
     } else {
@@ -97,7 +94,8 @@ class ServiceService {
           .map((part) {
             String trimmed = part.trim();
             if (trimmed.isEmpty) return '';
-            return trimmed[0].toUpperCase() + trimmed.substring(1).toLowerCase();
+            return trimmed[0].toUpperCase() +
+                trimmed.substring(1).toLowerCase();
           })
           .join(' ');
     }

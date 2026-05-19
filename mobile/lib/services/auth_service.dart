@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
@@ -5,32 +6,84 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../config/api_config.dart';
 
 class AuthService {
-  static String get _baseUrl => ApiConfig.apiPath;
   static const String _tokenKey = 'auth_token';
   static const String _userKey = 'auth_user';
-  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage();
+  static const FlutterSecureStorage _secureStorage = FlutterSecureStorage(
+    aOptions: AndroidOptions(encryptedSharedPreferences: true),
+  );
+
+  static const Map<String, String> _jsonHeaders = {
+    'Content-Type': 'application/json',
+    'Accept': 'application/json',
+  };
+
+  static Future<http.Response> _postAuth(
+    String endpoint,
+    Map<String, dynamic> body,
+  ) async {
+    final baseUrl = await ApiConfig.resolveReachableBaseUrl();
+
+    return http
+        .post(
+          Uri.parse('$baseUrl/api$endpoint'),
+          headers: _jsonHeaders,
+          body: jsonEncode(body),
+        )
+        .timeout(const Duration(seconds: 20));
+  }
+
+  static String _networkErrorMessage(Object? error) {
+    final candidates = ApiConfig.candidateBaseUrls.join(', ');
+
+    if (error is TimeoutException) {
+      return 'Connection timed out. The app could not reach Laravel on port 8000. '
+          'Tried: $candidates. '
+          'If you are using a real phone, run Flutter with '
+          '--dart-define=API_BASE_URL=http://<YOUR_PC_LAN_IP>:8000 and make sure Laravel is reachable on that IP.';
+    }
+
+    return 'Unable to reach the Laravel server. '
+        'Check that Docker/Laravel is running, port 8000 is exposed, and phone and PC are on the same Wi-Fi.';
+  }
+
+  static String _friendlyError(Object error) {
+    if (error is TimeoutException) {
+      return _networkErrorMessage(error);
+    }
+
+    return error.toString().replaceFirst('Exception: ', '');
+  }
 
   static Future<Map<String, dynamic>> login({
     required String email,
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/login'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email, 'password': password}),
-      );
+      final response = await _postAuth('/login', {
+        'email': email,
+        'password': password,
+      });
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      Map<String, dynamic> data;
+      try {
+        final decoded = jsonDecode(response.body);
+        data = decoded is Map<String, dynamic>
+            ? decoded
+            : <String, dynamic>{'message': 'Unexpected server response.'};
+      } catch (_) {
+        data = <String, dynamic>{};
+      }
 
       if (response.statusCode == 200) {
         final role = data['role']?.toString().toLowerCase() ?? 'user';
 
         if (role == 'admin') {
-          return {'success': true, 'data': data};
+          return {
+            'success': true,
+            'role': 'admin',
+            'redirect_url': data['redirect_url'],
+            'data': data,
+          };
         }
 
         final user = Map<String, dynamic>.from(
@@ -41,6 +94,7 @@ class AuthService {
         await _saveSession(data['token'] as String, user);
         return {
           'success': true,
+          'role': 'user',
           'data': {...data, 'role': 'user', 'user': user},
         };
       }
@@ -60,12 +114,18 @@ class AuthService {
         };
       }
 
+      if (response.statusCode == 429) {
+        return {
+          'success': false,
+          'message':
+              data['message'] ??
+              'Too many login attempts. Please wait a minute and try again.',
+        };
+      }
+
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
@@ -100,14 +160,7 @@ class AuthService {
         'phone': (phone != null && phone.isNotEmpty) ? phone : null,
       };
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/register'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode(body),
-      );
+      final response = await _postAuth('/register', body);
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -121,18 +174,23 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
+
+  static String? _cachedToken;
+  static Map<String, dynamic>? _cachedUser;
 
   static Future<void> _saveSession(String token, dynamic user) async {
     final prefs = await SharedPreferences.getInstance();
     await _secureStorage.write(key: _tokenKey, value: token);
     await prefs.setString(_userKey, jsonEncode(user));
+
+    _cachedToken = token;
+    _cachedUser = user is Map<String, dynamic>
+        ? user
+        : jsonDecode(jsonEncode(user)) as Map<String, dynamic>;
   }
 
   static Future<void> bootstrapSession({
@@ -143,14 +201,21 @@ class AuthService {
   }
 
   static Future<String?> getToken() async {
-    return _secureStorage.read(key: _tokenKey);
+    if (_cachedToken != null) return _cachedToken;
+
+    _cachedToken = await _secureStorage.read(key: _tokenKey);
+    return _cachedToken;
   }
 
   static Future<Map<String, dynamic>?> getUser() async {
+    if (_cachedUser != null) return _cachedUser;
+
     final prefs = await SharedPreferences.getInstance();
     final json = prefs.getString(_userKey);
     if (json == null) return null;
-    return jsonDecode(json) as Map<String, dynamic>;
+
+    _cachedUser = jsonDecode(json) as Map<String, dynamic>;
+    return _cachedUser;
   }
 
   static Future<bool> isLoggedIn() async {
@@ -164,6 +229,9 @@ class AuthService {
   }
 
   static Future<void> logout() async {
+    _cachedToken = null;
+    _cachedUser = null;
+
     final prefs = await SharedPreferences.getInstance();
     await _secureStorage.delete(key: _tokenKey);
     await prefs.remove(_userKey);
@@ -187,14 +255,9 @@ class AuthService {
     required String email,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/resend-verification'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email}),
-      );
+      final response = await _postAuth('/resend-verification', {
+        'email': email,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -203,11 +266,8 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
@@ -216,14 +276,10 @@ class AuthService {
     String code,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/verify-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email, 'code': code}),
-      );
+      final response = await _postAuth('/verify-code', {
+        'email': email,
+        'code': code,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -233,24 +289,16 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
   static Future<Map<String, dynamic>> sendVerificationCode(String email) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/send-verification-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email}),
-      );
+      final response = await _postAuth('/send-verification-code', {
+        'email': email,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -259,11 +307,8 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
@@ -272,14 +317,10 @@ class AuthService {
     String code,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/check-verification-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email, 'code': code}),
-      );
+      final response = await _postAuth('/check-verification-code', {
+        'email': email,
+        'code': code,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -288,11 +329,8 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
@@ -300,14 +338,9 @@ class AuthService {
     String email,
   ) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/send-password-reset-code'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({'email': email}),
-      );
+      final response = await _postAuth('/send-password-reset-code', {
+        'email': email,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -316,11 +349,8 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 
@@ -330,19 +360,12 @@ class AuthService {
     required String password,
   }) async {
     try {
-      final response = await http.post(
-        Uri.parse('$_baseUrl/reset-password'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-        },
-        body: jsonEncode({
-          'email': email,
-          'code': code,
-          'password': password,
-          'password_confirmation': password,
-        }),
-      );
+      final response = await _postAuth('/reset-password', {
+        'email': email,
+        'code': code,
+        'password': password,
+        'password_confirmation': password,
+      });
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -351,11 +374,8 @@ class AuthService {
       }
 
       return {'success': false, 'message': _extractError(data)};
-    } catch (_) {
-      return {
-        'success': false,
-        'message': 'Connection error. Please check your network.',
-      };
+    } catch (e) {
+      return {'success': false, 'message': _friendlyError(e)};
     }
   }
 }

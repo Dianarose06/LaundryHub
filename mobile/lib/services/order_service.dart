@@ -1,11 +1,12 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../config/api_config.dart';
 import 'auth_service.dart';
 
 class OrderService {
-  static String get _baseUrl => ApiConfig.apiPath;
+  static Future<String> _apiPath() => ApiConfig.resolveApiPath();
 
   static Future<String?> _getToken() async {
     return AuthService.getToken();
@@ -13,7 +14,8 @@ class OrderService {
 
   static Future<Map<String, dynamic>> createOrder({
     required int serviceId,
-    required double weightKg,
+    String orderType = 'pickup',
+    double? deliveryFee,
     required String pickupAddress,
     int? pickupBarangayId,
     String? pickupCity,
@@ -23,6 +25,7 @@ class OrderService {
     TimeOfDay? deliveryTime,
     String? notes,
     String? deliveryType,
+    XFile? laundryPhoto,
     List<int>? addOnIds,
   }) async {
     try {
@@ -36,7 +39,9 @@ class OrderService {
 
       final body = <String, dynamic>{
         'service_id': serviceId,
-        'weight_kg': weightKg,
+        'type': orderType,
+        'delivery_type': orderType,
+        'delivery_fee': deliveryFee ?? 0,
         'pickup_address': pickupAddress,
         'payment_method': 'cod',
       };
@@ -73,23 +78,51 @@ class OrderService {
         body['notes'] = notes;
       }
 
-      if (deliveryType != null) {
-        body['delivery_type'] = deliveryType;
-      }
-
       if (addOnIds != null && addOnIds.isNotEmpty) {
         body['add_ons'] = addOnIds;
       }
 
-      final response = await http.post(
-        Uri.parse('$_baseUrl/orders'),
-        headers: {
-          'Content-Type': 'application/json',
-          'Accept': 'application/json',
-          'Authorization': 'Bearer $token',
-        },
-        body: jsonEncode(body),
-      );
+      final uri = Uri.parse('${await _apiPath()}/orders');
+      late final http.Response response;
+
+      if (laundryPhoto != null) {
+        final request = http.MultipartRequest('POST', uri)
+          ..headers.addAll({
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          });
+
+        body.forEach((key, value) {
+          if (value is List) {
+            for (var i = 0; i < value.length; i++) {
+              request.fields['$key[$i]'] = value[i].toString();
+            }
+          } else if (value != null) {
+            request.fields[key] = value.toString();
+          }
+        });
+
+        request.files.add(
+          http.MultipartFile.fromBytes(
+            'laundry_photo',
+            await laundryPhoto.readAsBytes(),
+            filename: laundryPhoto.name,
+          ),
+        );
+
+        final streamed = await request.send();
+        response = await http.Response.fromStream(streamed);
+      } else {
+        response = await http.post(
+          uri,
+          headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json',
+            'Authorization': 'Bearer $token',
+          },
+          body: jsonEncode(body),
+        );
+      }
 
       final data = jsonDecode(response.body) as Map<String, dynamic>;
 
@@ -128,7 +161,7 @@ class OrderService {
       }
 
       final response = await http.get(
-        Uri.parse('$_baseUrl/orders'),
+        Uri.parse('${await _apiPath()}/orders'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -173,7 +206,7 @@ class OrderService {
       }
 
       final response = await http.get(
-        Uri.parse('$_baseUrl/orders/$orderId'),
+        Uri.parse('${await _apiPath()}/orders/$orderId'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
@@ -218,7 +251,7 @@ class OrderService {
       }
 
       final response = await http.patch(
-        Uri.parse('$_baseUrl/orders/$orderId/cancel'),
+        Uri.parse('${await _apiPath()}/orders/$orderId/cancel'),
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',

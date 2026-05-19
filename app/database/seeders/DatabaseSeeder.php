@@ -13,6 +13,7 @@ class DatabaseSeeder extends Seeder
     public function run(): void
     {
         $this->call(ServiceSeeder::class);
+        $this->call(CustomerOrderSeeder::class);
 
         // Admin account
         User::updateOrCreate(

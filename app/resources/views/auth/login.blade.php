@@ -8,7 +8,7 @@
         body {
             margin: 0;
             font-family: Arial, sans-serif;
-            background: #f3f4f6;
+            background: #F5F9FA;
             display: flex;
             min-height: 100vh;
             align-items: center;
@@ -18,21 +18,22 @@
         .card {
             width: 100%;
             max-width: 420px;
-            background: #ffffff;
+            background: #F5F9FA;
             border-radius: 12px;
             box-shadow: 0 10px 30px rgba(15, 23, 42, 0.12);
             padding: 24px;
+            border: 1px solid #A4D8E1;
         }
 
         h1 {
             margin: 0 0 10px;
             font-size: 24px;
-            color: #0f172a;
+            color: #2C3E50;
         }
 
         p {
             margin: 0 0 20px;
-            color: #475569;
+            color: #54B2B0;
             font-size: 14px;
         }
 
@@ -40,15 +41,15 @@
             margin-bottom: 14px;
             padding: 10px 12px;
             border-radius: 8px;
-            background: #fee2e2;
-            color: #991b1b;
+            background: #A4D8E1;
+            color: #2C3E50;
             font-size: 14px;
         }
 
         label {
             display: block;
             margin-bottom: 6px;
-            color: #0f172a;
+            color: #2C3E50;
             font-size: 14px;
             font-weight: 600;
         }
@@ -56,18 +57,20 @@
         input {
             width: 100%;
             box-sizing: border-box;
-            border: 1px solid #cbd5e1;
+            border: 1px solid #A4D8E1;
             border-radius: 8px;
             padding: 10px 12px;
             margin-bottom: 14px;
             font-size: 14px;
+            color: #2C3E50;
+            background: #FFFFFF;
         }
 
         button {
             width: 100%;
             border: 0;
             border-radius: 8px;
-            background: #2563eb;
+            background: #54B2B0;
             color: white;
             font-size: 14px;
             font-weight: 700;
@@ -76,7 +79,7 @@
         }
 
         button:hover {
-            background: #1d4ed8;
+            background: #2C3E50;
         }
     </style>
 </head>
