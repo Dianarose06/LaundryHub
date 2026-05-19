@@ -25,10 +25,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   final _codeFocusNodes = List.generate(6, (index) => FocusNode());
 
   bool _isLoading = false;
-  bool _obscurePassword = true;
-  bool _obscureConfirmPassword = true;
   bool _codeSent = false;
   bool _emailVerified = false;
+  static final RegExp _emailRegex = RegExp(
+    r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
+  );
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
 
   // Timer management
   Timer? _timer;
@@ -77,8 +82,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Future<void> _sendVerificationCode() async {
-    if (_emailController.text.trim().isEmpty ||
-        !_emailController.text.trim().contains('@')) {
+    final email = _emailController.text.trim();
+    if (email.isEmpty || !_emailRegex.hasMatch(email)) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: const Text('Please enter a valid email address'),
@@ -243,7 +248,11 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const LoginScreen()),
+        PageRouteBuilder(
+          pageBuilder: (_, __, ___) => const LoginScreen(),
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
+        ),
       );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -289,7 +298,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     IconButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pushReplacement(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const LoginScreen(),
+                          transitionDuration: Duration.zero,
+                          reverseTransitionDuration: Duration.zero,
+                        ),
+                      ),
                       icon: const Icon(
                         Icons.arrow_back_ios_new_rounded,
                         color: Colors.white,
@@ -365,43 +381,59 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 24),
 
                         // Name fields
+                        TextFormField(
+                          controller: _lastNameController,
+                          textCapitalization: TextCapitalization.words,
+                          maxLength: 50,
+                          maxLines: 1,
+                          style: const TextStyle(overflow: TextOverflow.ellipsis),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(_emojiRegex),
+                          ],
+                          decoration: InputDecoration(
+                            labelText: 'Last Name',
+                            prefixIcon: const Icon(Icons.person_outline),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            counterText: '',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.trim().isEmpty) {
+                              return 'Enter last name';
+                            }
+                            return null;
+                          },
+                        ),
+                        const SizedBox(height: 16),
                         Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             Expanded(
-                              flex: 2,
-                              child: TextFormField(
-                                controller: _lastNameController,
-                                textCapitalization: TextCapitalization.words,
-                                decoration: InputDecoration(
-                                  labelText: 'Last Name',
-                                  prefixIcon: const Icon(Icons.person_outline),
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: LaundryHubColors.pageBackground,
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.trim().isEmpty) {
-                                    return 'Enter last name';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Expanded(
-                              flex: 2,
                               child: TextFormField(
                                 controller: _firstNameController,
                                 textCapitalization: TextCapitalization.words,
+                                maxLength: 50,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.deny(_emojiRegex),
+                                ],
                                 decoration: InputDecoration(
                                   labelText: 'First Name',
+                                  prefixIcon: const Icon(
+                                    Icons.person_outline,
+                                  ),
                                   border: OutlineInputBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
-                                  fillColor: LaundryHubColors.pageBackground,
+                                  fillColor: Colors.white,
+                                  counterText: '',
                                 ),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) {
@@ -412,12 +444,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Expanded(
+                            SizedBox(
+                              width: 84,
                               child: TextFormField(
                                 controller: _middleInitialController,
                                 textCapitalization:
                                     TextCapitalization.characters,
                                 maxLength: 1,
+                                maxLines: 1,
+                                style: const TextStyle(
+                                  overflow: TextOverflow.ellipsis,
+                                ),
                                 decoration: InputDecoration(
                                   labelText: 'MI',
                                   hintText: 'Opt',
@@ -426,9 +463,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   filled: true,
-                                  fillColor: LaundryHubColors.pageBackground,
+                                  fillColor: Colors.white,
                                 ),
                                 inputFormatters: [
+                                  FilteringTextInputFormatter.deny(_emojiRegex),
                                   FilteringTextInputFormatter.allow(
                                     RegExp(r'[A-Za-z]'),
                                   ),
@@ -465,93 +503,86 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
 
                         // Email Address with Send Code button
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextFormField(
-                                controller: _emailController,
-                                keyboardType: TextInputType.emailAddress,
-                                enabled: !_emailVerified,
-                                onChanged: (value) {
-                                  final normalized = value.trim().toLowerCase();
-                                  if (normalized == _lastVerificationEmail) {
-                                    return;
-                                  }
-
-                                  if (_emailVerified || _codeSent) {
-                                    setState(() {
-                                      _emailVerified = false;
-                                      _codeSent = false;
-                                      _canResend = false;
-                                      _remainingSeconds = 60;
-                                    });
-                                    _timer?.cancel();
-                                    for (final c in _codeControllers) {
-                                      c.clear();
-                                    }
-                                  }
-                                },
-                                decoration: InputDecoration(
-                                  labelText: 'Email Address',
-                                  prefixIcon: const Icon(Icons.email_outlined),
-                                  suffixIcon: _emailVerified
-                                      ? const Icon(
-                                          Icons.check_circle,
-                                          color: LaundryHubColors.success,
-                                        )
-                                      : null,
-                                  border: OutlineInputBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                  filled: true,
-                                  fillColor: _emailVerified
-                                      ? LaundryHubColors.successPale
-                                      : LaundryHubColors.pageBackground,
-                                ),
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your email';
-                                  }
-                                  if (!value.contains('@')) {
-                                    return 'Please enter a valid email';
-                                  }
-                                  return null;
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                            if (!_emailVerified)
-                              ElevatedButton(
-                                onPressed: _isLoading
-                                    ? null
-                                    : _sendVerificationCode,
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: LaundryHubColors.primary,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                    vertical: 20,
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
-                                ),
-                                child: _isLoading
-                                    ? const SizedBox(
-                                        height: 16,
-                                        width: 16,
-                                        child: CircularProgressIndicator(
-                                          strokeWidth: 2,
-                                          valueColor:
-                                              AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
-                                        ),
-                                      )
-                                    : Text(_codeSent ? 'Resend' : 'Send Code'),
-                              ),
+                        TextFormField(
+                          controller: _emailController,
+                          keyboardType: TextInputType.emailAddress,
+                          enabled: !_emailVerified,
+                          maxLength: 100,
+                          maxLines: 1,
+                          style: const TextStyle(overflow: TextOverflow.ellipsis),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(_emojiRegex),
                           ],
+                          onChanged: (value) {
+                            final normalized = value.trim().toLowerCase();
+                            if (normalized == _lastVerificationEmail) {
+                              return;
+                            }
+
+                            if (_emailVerified || _codeSent) {
+                              setState(() {
+                                _emailVerified = false;
+                                _codeSent = false;
+                                _canResend = false;
+                                _remainingSeconds = 60;
+                              });
+                              _timer?.cancel();
+                              for (final c in _codeControllers) {
+                                c.clear();
+                              }
+                            }
+                          },
+                          decoration: InputDecoration(
+                            labelText: 'Email Address',
+                            prefixIcon: const Icon(Icons.email_outlined),
+                            suffixIcon: _emailVerified
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: LaundryHubColors.success,
+                                  )
+                                : null,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            filled: true,
+                            fillColor: _emailVerified
+                                ? LaundryHubColors.successPale
+                                : Colors.white,
+                            counterText: '',
+                          ),
+                          validator: (value) {
+                            if (value == null || value.isEmpty) {
+                              return 'Email is required';
+                            }
+                            if (!_emailRegex.hasMatch(value.trim())) {
+                              return 'Please enter a valid email address';
+                            }
+                            return null;
+                          },
                         ),
+                        if (!_emailVerified)
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed:
+                                  _isLoading ? null : _sendVerificationCode,
+                              child: _isLoading
+                                  ? const SizedBox(
+                                      height: 16,
+                                      width: 16,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(
+                                              LaundryHubColors.primary,
+                                            ),
+                                      ),
+                                    )
+                                  : Text(
+                                      _codeSent ? 'Resend Code' : 'Send Code',
+                                    ),
+                            ),
+                          ),
                         const SizedBox(height: 16),
 
                         // Verification Code Input (shows after code is sent)
@@ -573,11 +604,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                   controller: _codeControllers[index],
                                   focusNode: _codeFocusNodes[index],
                                   textAlign: TextAlign.center,
-                                  keyboardType: TextInputType.number,
+                                  keyboardType: TextInputType.phone,
                                   maxLength: 1,
+                                  maxLines: 1,
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                   decoration: InputDecoration(
                                     counterText: '',
@@ -646,6 +679,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         TextFormField(
                           controller: _phoneController,
                           keyboardType: TextInputType.phone,
+                          maxLength: 11,
+                          maxLines: 1,
+                          style: const TextStyle(overflow: TextOverflow.ellipsis),
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(_emojiRegex),
+                            FilteringTextInputFormatter.digitsOnly,
+                            LengthLimitingTextInputFormatter(11),
+                          ],
                           decoration: InputDecoration(
                             labelText: 'Phone Number (optional)',
                             prefixIcon: const Icon(Icons.phone_outlined),
@@ -653,42 +694,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                               borderRadius: BorderRadius.circular(12),
                             ),
                             filled: true,
-                            fillColor: LaundryHubColors.pageBackground,
+                            fillColor: Colors.white,
+                            counterText: '',
                           ),
                         ),
                         const SizedBox(height: 16),
 
                         // Password
-                        TextFormField(
+                        _PasswordField(
                           controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          decoration: InputDecoration(
-                            labelText: 'Password',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                              onPressed: () {
-                                setState(
-                                  () => _obscurePassword = !_obscurePassword,
-                                );
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: LaundryHubColors.pageBackground,
-                          ),
+                          labelText: 'Password',
+                          maxLength: 64,
+                          helperText: 'Min. 8 characters, 1 uppercase, 1 number',
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(_emojiRegex),
+                          ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please enter a password';
                             }
-                            if (value.length < 8) {
-                              return 'Password must be at least 8 characters';
+                            if (!RegExp(
+                              r'^(?=.*[A-Z])(?=.*\d).{8,}$',
+                            ).hasMatch(value)) {
+                              return 'Password must be at least 8 characters with 1 uppercase and 1 number';
                             }
                             return null;
                           },
@@ -696,31 +724,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const SizedBox(height: 16),
 
                         // Confirm Password
-                        TextFormField(
+                        _PasswordField(
                           controller: _confirmPasswordController,
-                          obscureText: _obscureConfirmPassword,
-                          decoration: InputDecoration(
-                            labelText: 'Confirm Password',
-                            prefixIcon: const Icon(Icons.lock_outline),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscureConfirmPassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                              ),
-                              onPressed: () {
-                                setState(
-                                  () => _obscureConfirmPassword =
-                                      !_obscureConfirmPassword,
-                                );
-                              },
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            filled: true,
-                            fillColor: LaundryHubColors.pageBackground,
-                          ),
+                          labelText: 'Confirm Password',
+                          maxLength: 64,
+                          inputFormatters: [
+                            FilteringTextInputFormatter.deny(_emojiRegex),
+                          ],
                           validator: (value) {
                             if (value == null || value.isEmpty) {
                               return 'Please confirm your password';
@@ -781,7 +791,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       style: TextStyle(color: LaundryHubColors.textSubtle),
                     ),
                     TextButton(
-                      onPressed: () => Navigator.pop(context),
+                      onPressed: () => Navigator.pushReplacement(
+                        context,
+                        PageRouteBuilder(
+                          pageBuilder: (_, __, ___) => const LoginScreen(),
+                          transitionDuration: Duration.zero,
+                          reverseTransitionDuration: Duration.zero,
+                        ),
+                      ),
                       child: const Text(
                         'Sign In',
                         style: TextStyle(
@@ -801,6 +818,77 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 
   Widget _buildBrandLogo() {
-    return Image.asset('assets/images/logo.png', fit: BoxFit.contain);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+    );
+  }
+}
+
+class _PasswordField extends StatefulWidget {
+  const _PasswordField({
+    required this.controller,
+    required this.labelText,
+    required this.validator,
+    this.helperText,
+    this.inputFormatters,
+    this.maxLength,
+  });
+
+  final TextEditingController controller;
+  final String labelText;
+  final String? Function(String?) validator;
+  final String? helperText;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
+
+  @override
+  State<_PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<_PasswordField> {
+  bool _obscureText = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: _obscureText,
+      maxLength: widget.maxLength,
+      maxLines: 1,
+      style: const TextStyle(overflow: TextOverflow.ellipsis),
+      inputFormatters: widget.inputFormatters,
+      decoration: InputDecoration(
+        labelText: widget.labelText,
+        helperText: widget.helperText,
+        prefixIcon: const Icon(Icons.lock_outline),
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscureText
+                ? Icons.visibility_off_outlined
+                : Icons.visibility_outlined,
+          ),
+          onPressed: () => setState(() => _obscureText = !_obscureText),
+        ),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
+        filled: true,
+        fillColor: Colors.white,
+        counterText: '',
+      ),
+      validator: widget.validator,
+    );
   }
 }

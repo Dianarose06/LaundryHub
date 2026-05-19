@@ -18,6 +18,10 @@ class EditProfileScreen extends StatefulWidget {
 }
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
   late ProfileService _profileService;
   late TextEditingController _lastNameController;
   late TextEditingController _firstNameController;
@@ -426,7 +430,10 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                     controller: _middleInitialController,
                     textCapitalization: TextCapitalization.characters,
                     maxLength: 1,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
                     inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
                       FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z]')),
                       LengthLimitingTextInputFormatter(1),
                     ],
@@ -459,6 +466,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               label: 'Phone Number',
               icon: Icons.phone,
               keyboardType: TextInputType.phone,
+              maxLength: 11,
             ),
             const SizedBox(height: 12),
             _buildTextField(
@@ -492,12 +500,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               controller: _addressController,
               label: 'Address',
               icon: Icons.location_on,
+              maxLines: 6,
+              maxLength: 150,
             ),
             const SizedBox(height: 12),
             _buildTextField(
               controller: _cityController,
               label: 'City',
               icon: Icons.location_city,
+              maxLength: 60,
             ),
             const SizedBox(height: 12),
             _buildTextField(
@@ -505,12 +516,14 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
               label: 'Zip Code',
               icon: Icons.mail,
               keyboardType: TextInputType.number,
+              maxLength: 10,
             ),
             const SizedBox(height: 12),
             _buildTextField(
               controller: _countryController,
               label: 'Country',
               icon: Icons.public,
+              maxLength: 60,
             ),
             const SizedBox(height: 24),
 
@@ -591,8 +604,20 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     int? maxLength,
     TextInputType keyboardType = TextInputType.text,
   }) {
+    final inputFormatters = <TextInputFormatter>[
+      FilteringTextInputFormatter.deny(_emojiRegex),
+    ];
+    if (keyboardType == TextInputType.phone ||
+        keyboardType == TextInputType.number) {
+      inputFormatters.add(FilteringTextInputFormatter.digitsOnly);
+    }
+
     return TextField(
       controller: controller,
+      minLines: 1,
+      style: maxLines == 1
+          ? const TextStyle(overflow: TextOverflow.ellipsis)
+          : null,
       decoration: InputDecoration(
         labelText: isRequired ? '$label *' : label,
         prefixIcon: Icon(icon),
@@ -602,6 +627,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       maxLines: maxLines,
       maxLength: maxLength,
       keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
     );
   }
 

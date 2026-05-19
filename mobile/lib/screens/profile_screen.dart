@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:dio/dio.dart';
 import 'package:image_picker/image_picker.dart';
 import '../services/auth_service.dart';
@@ -16,6 +17,10 @@ class ProfileScreen extends StatefulWidget {
 }
 
 class _ProfileScreenState extends State<ProfileScreen> {
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
   Map<String, dynamic>? _user;
   CustomerProfile? _profile;
   ProfileCompletionStatus? _completionStatus;
@@ -262,6 +267,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     controller: currentPasswordController,
                     obscureText: hideCurrent,
                     enabled: !isSubmitting,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Current Password',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -279,6 +289,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     controller: newPasswordController,
                     obscureText: hideNew,
                     enabled: !isSubmitting,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'New Password',
                       prefixIcon: const Icon(Icons.lock_reset_outlined),
@@ -296,6 +311,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     controller: confirmPasswordController,
                     obscureText: hideConfirm,
                     enabled: !isSubmitting,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Confirm New Password',
                       prefixIcon: const Icon(Icons.lock_person_outlined),
@@ -498,8 +518,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 12),
                   TextField(
                     controller: codeController,
-                    keyboardType: TextInputType.number,
+                    keyboardType: TextInputType.phone,
                     maxLength: 6,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.digitsOnly,
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Verification Code',
                       hintText: 'Enter 6-digit code',

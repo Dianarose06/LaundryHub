@@ -33,6 +33,11 @@ class AuthController extends Controller
         return $fallbackName;
     }
 
+    private function normalizePhone(?string $phone): string
+    {
+        return preg_replace('/\D+/', '', (string) ($phone ?? '')) ?: '';
+    }
+
     public function register(Request $request)
     {
         $validated = $request->validate([
@@ -46,6 +51,30 @@ class AuthController extends Controller
         ]);
 
         $formattedName = $this->formatRegisteredName($validated);
+        $normalizedPhone = $this->normalizePhone($validated['phone'] ?? null);
+
+        if ($normalizedPhone !== '') {
+            $existingByPhone = User::query()
+                ->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(',''),')',''),'+','') = ?", [$normalizedPhone])
+                ->first();
+
+            if ($existingByPhone) {
+                throw ValidationException::withMessages([
+                    'phone' => ['An account with this phone number already exists'],
+                ]);
+            }
+
+            $existingByNameAndPhone = User::query()
+                ->whereRaw('LOWER(TRIM(name)) = ?', [mb_strtolower(trim($formattedName))])
+                ->whereRaw("REPLACE(REPLACE(REPLACE(REPLACE(REPLACE(phone,' ',''),'-',''),'(',''),')',''),'+','') = ?", [$normalizedPhone])
+                ->exists();
+
+            if ($existingByNameAndPhone) {
+                throw ValidationException::withMessages([
+                    'phone' => ['An account with this phone number already exists'],
+                ]);
+            }
+        }
 
         // Check if email was verified during registration process
         $isEmailVerified = Cache::get("email_verified_{$validated['email']}");
@@ -380,4 +409,3 @@ class AuthController extends Controller
         ]);
     }
 }
-

@@ -20,6 +20,7 @@ class OrderController extends Controller
     private const TACLOBAN_CITY = 'Tacloban City, Leyte';
     private const DEFAULT_PICKUP_FEE = 30.00;
     private const DEFAULT_DELIVERY_FEE = 30.00;
+    private const FIXED_PICKUP_DELIVERY_FEE = 50.00;
 
     private function logisticsFeeExplanation(): array
     {
@@ -48,8 +49,13 @@ class OrderController extends Controller
             ? (float) $barangay->delivery_fee
             : self::DEFAULT_DELIVERY_FEE;
 
-        $pickupFee = $deliveryType === 'pickup' ? $basePickupFee : 0.0;
-        $deliveryFee = $baseDeliveryFee;
+        $orderType = in_array($deliveryType, ['dropoff', 'delivery'], true)
+            ? 'dropoff'
+            : 'pickup';
+        $pickupFee = 0.0;
+        $deliveryFee = $orderType === 'pickup'
+            ? self::FIXED_PICKUP_DELIVERY_FEE
+            : 0.0;
 
         $feeZone = $barangay
             ? (string) $barangay->zone
@@ -184,6 +190,7 @@ class OrderController extends Controller
             ->paginate(20)
             ->map(function ($order) {
                 $deliveryType = $order->delivery_type ?? 'pickup';
+                $orderType = $order->type ?? ($deliveryType === 'delivery' ? 'dropoff' : 'pickup');
                 $computedFees = $this->calculateLogisticsFees($deliveryType, $order->pickupBarangay);
 
                 $pickupFee = $order->pickup_fee !== null
@@ -219,6 +226,9 @@ class OrderController extends Controller
                     'delivery_date' => $order->delivery_date,
                     'delivery_time' => $order->delivery_time,
                     'delivery_type' => $deliveryType,
+                    'type' => $orderType,
+                    'laundry_photo' => $order->laundry_photo,
+                    'laundry_photo_url' => $order->laundry_photo ? asset($order->laundry_photo) : null,
                     'payment_method' => 'cod',
                     'special_instructions' => $order->notes,
                     'created_at' => $order->created_at,
@@ -236,20 +246,27 @@ class OrderController extends Controller
     {
         $validated = $request->validate([
             'service_id'     => 'required|exists:services,id',
-            'weight_kg'      => 'required|numeric|min:0.1|max:500',
-            'pickup_address' => 'required|string|max:500',
+            'weight_kg'      => 'nullable|numeric|min:0|max:500',
+            'type'           => 'nullable|in:pickup,dropoff',
+            'pickup_address' => 'nullable|string|max:500',
             'pickup_barangay_id' => 'nullable|integer|exists:barangays,id',
             'pickup_city' => 'nullable|string|max:100',
             'pickup_date'    => 'nullable|date',
             'pickup_time'    => 'nullable|date_format:H:i',
             'delivery_date'  => 'nullable|date',
             'delivery_time'  => 'nullable|date_format:H:i',
-            'delivery_type'  => 'nullable|in:pickup,delivery',
+            'delivery_type'  => 'nullable|in:pickup,dropoff,delivery',
+            'delivery_fee'   => 'nullable|numeric|min:0|max:999999',
+            'laundry_photo'  => 'nullable|image|mimes:jpeg,png,jpg,gif|max:5120',
             'payment_method' => 'nullable|in:cod',
             'notes'          => 'nullable|string|max:1000',
             'add_ons'        => 'nullable|array',
             'add_ons.*'      => 'integer|distinct|exists:add_on_services,id',
         ]);
+
+        $orderType = $validated['type']
+            ?? (($validated['delivery_type'] ?? 'pickup') === 'delivery' ? 'dropoff' : ($validated['delivery_type'] ?? 'pickup'));
+        $orderType = $orderType === 'dropoff' ? 'dropoff' : 'pickup';
 
         $requestedCity = trim((string) ($validated['pickup_city'] ?? ''));
         if ($requestedCity !== '' && strcasecmp($requestedCity, self::TACLOBAN_CITY) !== 0) {
@@ -262,7 +279,16 @@ class OrderController extends Controller
         }
 
         $pickupBarangay = null;
-        if (!empty($validated['pickup_barangay_id'])) {
+        if ($orderType === 'pickup' && empty($validated['pickup_address'])) {
+            return response()->json([
+                'message' => 'Pickup address is required for pickup orders.',
+                'errors' => [
+                    'pickup_address' => ['Pickup address is required for pickup orders.'],
+                ],
+            ], 422);
+        }
+
+        if ($orderType === 'pickup' && !empty($validated['pickup_barangay_id'])) {
             $pickupBarangay = Barangay::query()
                 ->active()
                 ->where('city', self::TACLOBAN_CITY)
@@ -280,9 +306,9 @@ class OrderController extends Controller
         }
 
         $service = Service::findOrFail($validated['service_id']);
-        $deliveryType = $validated['delivery_type'] ?? 'pickup';
-        $fees = $this->calculateLogisticsFees($deliveryType, $pickupBarangay);
-        $basePrice = round(($service->price_per_kg / 8) * $validated['weight_kg'], 2);
+        $deliveryType = $orderType === 'pickup' ? 'pickup' : 'delivery';
+        $fees = $this->calculateLogisticsFees($orderType, $pickupBarangay);
+        $basePrice = 0.00;
 
         $addOnIds = $validated['add_ons'] ?? [];
         $addOnServices = collect();
@@ -316,19 +342,24 @@ class OrderController extends Controller
         $totalPrice = round(
             $basePrice
             + $addOnTotal
-            + (float) $fees['pickup_fee']
             + (float) $fees['delivery_fee'],
             2
         );
 
+        $laundryPhotoPath = null;
+        if ($request->hasFile('laundry_photo')) {
+            $path = $request->file('laundry_photo')->store('laundry-photos', 'public');
+            $laundryPhotoPath = 'storage/' . $path;
+        }
+
         $order = Order::create([
             'user_id'        => $request->user()->id,
             'service_id'     => $service->id,
-            'weight_kg'      => $validated['weight_kg'],
+            'weight_kg'      => $validated['weight_kg'] ?? 0,
             'total_price'    => $totalPrice,
             'add_on_total'   => $addOnTotal,
             'status'         => 'pending',
-            'pickup_address' => $validated['pickup_address'],
+            'pickup_address' => $orderType === 'pickup' ? ($validated['pickup_address'] ?? '') : '',
             'pickup_barangay_id' => $pickupBarangay?->id,
             'pickup_city' => $fees['pickup_city'],
             'pickup_barangay' => $fees['pickup_barangay'],
@@ -337,6 +368,8 @@ class OrderController extends Controller
             'delivery_date'  => $validated['delivery_date'] ?? null,
             'delivery_time'  => $validated['delivery_time'] ?? null,
             'delivery_type'  => $deliveryType,
+            'type'           => $orderType,
+            'laundry_photo'  => $laundryPhotoPath,
             'pickup_fee'     => (float) $fees['pickup_fee'],
             'delivery_fee'   => (float) $fees['delivery_fee'],
             'fee_zone'       => $fees['fee_zone'],

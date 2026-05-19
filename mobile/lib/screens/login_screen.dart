@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../config/api_config.dart';
 import '../services/auth_service.dart';
@@ -19,7 +20,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   bool _isLoading = false;
-  bool _obscurePassword = true;
+  static final RegExp _emailRegex = RegExp(
+    r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
+  );
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
 
   @override
   void dispose() {
@@ -124,6 +131,14 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Route<T> _noTransitionRoute<T>(Widget page) {
+    return PageRouteBuilder<T>(
+      pageBuilder: (_, __, ___) => page,
+      transitionDuration: Duration.zero,
+      reverseTransitionDuration: Duration.zero,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -218,47 +233,40 @@ class _LoginScreenState extends State<LoginScreen> {
                             TextFormField(
                               controller: _emailController,
                               keyboardType: TextInputType.emailAddress,
+                              maxLength: 100,
+                              maxLines: 1,
+                              style: const TextStyle(overflow: TextOverflow.ellipsis),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.deny(_emojiRegex),
+                              ],
                               decoration: _inputDecoration(
                                 'Email Address',
                                 Icons.email_outlined,
-                              ),
+                              ).copyWith(counterText: ''),
                               validator: (v) {
                                 if (v == null || v.trim().isEmpty) {
-                                  return 'Please enter your email';
+                                  return 'Email is required';
                                 }
-                                if (!RegExp(
-                                  r'^[\w.-]+@([\w-]+\.)+[\w-]{2,4}$',
-                                ).hasMatch(v.trim())) {
-                                  return 'Please enter a valid email';
+                                if (!_emailRegex.hasMatch(v.trim())) {
+                                  return 'Please enter a valid email address';
                                 }
                                 return null;
                               },
                             ),
                             const SizedBox(height: 16),
-                            TextFormField(
+                            _PasswordField(
                               controller: _passwordController,
-                              obscureText: _obscurePassword,
-                              decoration:
-                                  _inputDecoration(
-                                    'Password',
-                                    Icons.lock_outline,
-                                  ).copyWith(
-                                    suffixIcon: IconButton(
-                                      icon: Icon(
-                                        _obscurePassword
-                                            ? Icons.visibility_off_outlined
-                                            : Icons.visibility_outlined,
-                                        color: LaundryHubColors.textSubtle,
-                                      ),
-                                      onPressed: () => setState(
-                                        () => _obscurePassword =
-                                            !_obscurePassword,
-                                      ),
-                                    ),
-                                  ),
+                              maxLength: 64,
+                              decoration: _inputDecoration(
+                                'Password',
+                                Icons.lock_outline,
+                              ),
+                              inputFormatters: [
+                                FilteringTextInputFormatter.deny(_emojiRegex),
+                              ],
                               validator: (v) {
                                 if (v == null || v.isEmpty) {
-                                  return 'Please enter your password';
+                                  return 'Password is required';
                                 }
                                 return null;
                               },
@@ -337,9 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     TextButton(
                       onPressed: () => Navigator.push(
                         context,
-                        MaterialPageRoute(
-                          builder: (_) => const RegisterScreen(),
-                        ),
+                        _noTransitionRoute(const RegisterScreen()),
                       ),
                       child: const Text(
                         'Register',
@@ -360,7 +366,21 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildBrandLogo() {
-    return Image.asset('assets/images/logo.png', fit: BoxFit.contain);
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.14),
+            blurRadius: 18,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      child: Image.asset('assets/images/logo.png', fit: BoxFit.contain),
+    );
   }
 
   InputDecoration _inputDecoration(String label, IconData icon) {
@@ -390,6 +410,52 @@ class _LoginScreenState extends State<LoginScreen> {
         borderRadius: BorderRadius.circular(12),
         borderSide: const BorderSide(color: LaundryHubColors.error, width: 2),
       ),
+    );
+  }
+}
+
+class _PasswordField extends StatefulWidget {
+  const _PasswordField({
+    required this.controller,
+    required this.decoration,
+    required this.validator,
+    this.inputFormatters,
+    this.maxLength,
+  });
+
+  final TextEditingController controller;
+  final InputDecoration decoration;
+  final String? Function(String?) validator;
+  final List<TextInputFormatter>? inputFormatters;
+  final int? maxLength;
+
+  @override
+  State<_PasswordField> createState() => _PasswordFieldState();
+}
+
+class _PasswordFieldState extends State<_PasswordField> {
+  bool _obscureText = true;
+
+  @override
+  Widget build(BuildContext context) {
+    return TextFormField(
+      controller: widget.controller,
+      obscureText: _obscureText,
+      maxLength: widget.maxLength,
+      maxLines: 1,
+      style: const TextStyle(overflow: TextOverflow.ellipsis),
+      inputFormatters: widget.inputFormatters,
+      decoration: widget.decoration.copyWith(
+        counterText: '',
+        suffixIcon: IconButton(
+          icon: Icon(
+            _obscureText ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+            color: LaundryHubColors.textSubtle,
+          ),
+          onPressed: () => setState(() => _obscureText = !_obscureText),
+        ),
+      ),
+      validator: widget.validator,
     );
   }
 }

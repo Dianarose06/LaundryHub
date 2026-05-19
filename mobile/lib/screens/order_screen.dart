@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:typed_data';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:image_picker/image_picker.dart';
 import '../services/order_service.dart';
 import '../services/service_service.dart';
 import '../config/api_config.dart';
 import 'booking_confirmed_screen.dart';
 import '../theme/laundryhub_theme.dart';
 
-// â”€â”€ Design tokens (mirrors HomeScreen / _C) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
 class _K {
   static const primary = LaundryHubColors.primary;
   static const primaryPale = LaundryHubColors.primaryPale;
@@ -19,6 +22,8 @@ class _K {
   static const surface = LaundryHubColors.surfaceSoft;
   static const amber = LaundryHubColors.warning;
   static const amberLight = LaundryHubColors.warningPale;
+  static const fixedPickupDeliveryFee = 50.0;
+  static const actionSolid = Color(0xFF0891B2);
 
   static const fallbackPickupFee = 30.0;
   static const fallbackDeliveryFee = 30.0;
@@ -40,15 +45,18 @@ class OrderScreen extends StatefulWidget {
 }
 
 class _OrderScreenState extends State<OrderScreen> {
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
   static const int _addOnsPerPage = 6;
   late final http.Client _httpClient;
   bool _ownsHttpClient = false;
 
-  // â”€â”€ UI state (new multi-step flow) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── UI state (new multi-step flow) ────────────────────────────────────────
   int _currentStep = 0;
   late final PageController _pageController;
   String _deliveryType = 'pickup';
-  double _estimatedKg = 3.0;
   bool _loadingServices = true;
   bool _loadingAddOns = true;
   bool _loadingBarangays = true;
@@ -57,10 +65,9 @@ class _OrderScreenState extends State<OrderScreen> {
 
   String _emojiFor(String name) => ''; // Placeholder - icons are used instead
 
-  // â”€â”€ Existing business-logic state (unchanged) â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Existing business-logic state (unchanged) ─────────────────────────────
   final _formKey = GlobalKey<FormState>();
   final _addressController = TextEditingController();
-  final _weightController = TextEditingController();
   final _instructionsController = TextEditingController();
   final _customPriceController = TextEditingController();
   int? _selectedServiceId;
@@ -68,6 +75,8 @@ class _OrderScreenState extends State<OrderScreen> {
   TimeOfDay? _pickupTime;
   DateTime? _deliveryDate;
   TimeOfDay? _deliveryTime;
+  XFile? _laundryPhoto;
+  Uint8List? _laundryPhotoPreviewBytes;
   bool _isLoading = false;
 
   List<Map<String, dynamic>> _services = [];
@@ -118,7 +127,7 @@ class _OrderScreenState extends State<OrderScreen> {
             final priceVal = rawPrice is num
                 ? rawPrice.toDouble()
                 : double.tryParse(rawPrice?.toString() ?? '0') ?? 0.0;
-            final priceStr = '₱${priceVal.round()}/8kg';
+            final priceStr = '?${priceVal.round()}/8kg';
             return <String, dynamic>{
               'id': (m['id'] as num).toInt(),
               'name': name,
@@ -338,7 +347,6 @@ class _OrderScreenState extends State<OrderScreen> {
   void dispose() {
     _pageController.dispose();
     _addressController.dispose();
-    _weightController.dispose();
     _instructionsController.dispose();
     _customPriceController.dispose();
     if (_ownsHttpClient) {
@@ -699,6 +707,24 @@ class _OrderScreenState extends State<OrderScreen> {
 
   String get _specialHandlingNotes => _instructionsController.text.trim();
 
+  Future<void> _pickLaundryPhoto() async {
+    final image = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+      maxWidth: 1600,
+      maxHeight: 1600,
+    );
+
+    if (image != null && mounted) {
+      final previewBytes = await image.readAsBytes();
+      if (!mounted) return;
+      setState(() {
+        _laundryPhoto = image;
+        _laundryPhotoPreviewBytes = previewBytes;
+      });
+    }
+  }
+
   Future<void> _submitOrder() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -720,16 +746,15 @@ class _OrderScreenState extends State<OrderScreen> {
 
     final result = await OrderService.createOrder(
       serviceId: _selectedServiceId!,
-      weightKg: double.parse(_weightController.text.trim()),
-      pickupAddress: _fullPickupAddress,
-      pickupBarangayId: _selectedBarangayId,
-      pickupCity: _K.taclobanCity,
+      orderType: _deliveryType,
+      deliveryFee: _deliveryType == 'pickup' ? _K.fixedPickupDeliveryFee : 0.0,
+      pickupAddress: _deliveryType == 'pickup' ? _fullPickupAddress : '',
+      pickupBarangayId: _deliveryType == 'pickup' ? _selectedBarangayId : null,
+      pickupCity: _deliveryType == 'pickup' ? _K.taclobanCity : null,
       pickupDate: _pickupDate,
       pickupTime: _pickupTime,
-      deliveryDate: _deliveryDate,
-      deliveryTime: _deliveryTime,
       notes: _specialHandlingNotes,
-      deliveryType: _deliveryType == 'dropoff' ? 'delivery' : 'pickup',
+      laundryPhoto: _deliveryType == 'pickup' ? _laundryPhoto : null,
       addOnIds: _selectedAddOnIds.toList(),
     );
 
@@ -764,7 +789,7 @@ class _OrderScreenState extends State<OrderScreen> {
     }
   }
 
-  // â”€â”€ Step navigation â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step navigation ───────────────────────────────────────────────────────
 
   void _goNext() {
     if (_currentStep == 0) {
@@ -806,7 +831,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return;
       }
 
-      if (_loadingBarangays) {
+      if (_deliveryType == 'pickup' && _loadingBarangays) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please wait while we load Tacloban barangays'),
@@ -820,7 +845,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return;
       }
 
-      if (_selectedBarangayId == null) {
+      if (_deliveryType == 'pickup' && _selectedBarangayId == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please select your barangay'),
@@ -834,7 +859,7 @@ class _OrderScreenState extends State<OrderScreen> {
         return;
       }
 
-      if (_addressController.text.trim().isEmpty) {
+      if (_deliveryType == 'pickup' && _addressController.text.trim().isEmpty) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: const Text('Please enter house, street, or landmark'),
@@ -847,8 +872,6 @@ class _OrderScreenState extends State<OrderScreen> {
         );
         return;
       }
-      // sync weight controller from estimator
-      _weightController.text = _estimatedKg.toStringAsFixed(1);
     }
     setState(() => _currentStep++);
     _pageController.nextPage(
@@ -866,11 +889,10 @@ class _OrderScreenState extends State<OrderScreen> {
   }
 
   Future<void> _handleConfirm() async {
-    _weightController.text = _estimatedKg.toStringAsFixed(1);
     await _submitOrder();
   }
 
-  // â”€â”€ Build â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Build ─────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
@@ -895,7 +917,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ App bar â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── App bar ───────────────────────────────────────────────────────────────
 
   Widget _buildAppBar() {
     const stepLabels = ['1 / 3', '2 / 3', '3 / 3'];
@@ -956,7 +978,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ Step indicator â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step indicator ────────────────────────────────────────────────────────
 
   Widget _buildStepIndicator() {
     return Container(
@@ -980,7 +1002,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  // â”€â”€ Step 1: Service selection â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 1: Service selection ─────────────────────────────────────────────
 
   Widget _buildStep1() {
     return SingleChildScrollView(
@@ -1116,7 +1138,7 @@ class _OrderScreenState extends State<OrderScreen> {
               },
             ),
           const SizedBox(height: 32),
-          _nextButton('Continue →', _goNext),
+          _nextButton('Continue ?', _goNext),
         ],
       ),
     );
@@ -1128,7 +1150,7 @@ class _OrderScreenState extends State<OrderScreen> {
     return Icon(icon, size: 26, color: const Color(0xFF0891B2));
   }
 
-  // â”€â”€ Step 2: Schedule â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 2: Schedule ──────────────────────────────────────────────────────
 
   Widget _buildStep2() {
     return SingleChildScrollView(
@@ -1152,15 +1174,20 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           const SizedBox(height: 24),
 
-          // Delivery type selector
           Row(
             children: [
-              _deliveryTypeTile('pickup', Icons.two_wheeler_rounded, 'Pickup'),
+              _deliveryTypeTile(
+                'pickup',
+                Icons.two_wheeler_rounded,
+                'Pickup',
+                'We come to you',
+              ),
               const SizedBox(width: 12),
               _deliveryTypeTile(
                 'dropoff',
-                Icons.directions_walk_rounded,
+                Icons.storefront_rounded,
                 'Drop-off',
+                'You bring it to us',
               ),
             ],
           ),
@@ -1188,77 +1215,10 @@ class _OrderScreenState extends State<OrderScreen> {
           ),
           const SizedBox(height: 20),
 
-          // Delivery date/time section
-          Text(
-            'Delivery Schedule',
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _K.navy,
-            ),
-          ),
-          const SizedBox(height: 10),
-          _schedulePickerRow(
-            icon: Icons.event_outlined,
-            value: _deliveryDate != null ? _formatDate(_deliveryDate!) : null,
-            placeholder: 'Select delivery date',
-            onTap: _selectDeliveryDate,
-          ),
-          const SizedBox(height: 12),
-          _schedulePickerRow(
-            icon: Icons.schedule_outlined,
-            value: _deliveryTime != null ? _formatTime(_deliveryTime!) : null,
-            placeholder: 'Select delivery time',
-            onTap: _selectDeliveryTime,
-          ),
-          const SizedBox(height: 20),
-
-          // Weight estimator
-          Container(
-            padding: const EdgeInsets.all(14),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(14),
-              border: Border.all(color: _K.border, width: 1.5),
-            ),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Estimated Weight',
-                        style: GoogleFonts.dmSans(
-                          fontSize: 12,
-                          fontWeight: FontWeight.w700,
-                          color: _K.navy,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                _weightBtn(Icons.remove, () {
-                  if (_estimatedKg > 0.5) setState(() => _estimatedKg -= 0.5);
-                }),
-                const SizedBox(width: 12),
-                Text(
-                  '${_estimatedKg.toStringAsFixed(1)} kg',
-                  style: GoogleFonts.outfit(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w800,
-                    color: _K.primary,
-                  ),
-                ),
-                const SizedBox(width: 12),
-                _weightBtn(Icons.add, () {
-                  setState(() => _estimatedKg += 0.5);
-                }),
-              ],
-            ),
-          ),
-
-          const SizedBox(height: 20),
+          if (_deliveryType == 'dropoff') ...[
+            _dropOffNoFeeBanner(),
+            const SizedBox(height: 20),
+          ],
 
           Text(
             _addOnSectionTitle,
@@ -1438,7 +1398,7 @@ class _OrderScreenState extends State<OrderScreen> {
               child: Padding(
                 padding: const EdgeInsets.only(top: 4),
                 child: Text(
-                  'Add-on subtotal: ₱ ${_addOnTotal.toStringAsFixed(2)}',
+                  'Add-on subtotal: ? ${_addOnTotal.toStringAsFixed(2)}',
                   style: GoogleFonts.dmSans(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
@@ -1450,15 +1410,16 @@ class _OrderScreenState extends State<OrderScreen> {
 
           const SizedBox(height: 20),
 
-          Text(
-            'Address Details',
-            style: GoogleFonts.dmSans(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: _K.navy,
+          if (_deliveryType == 'pickup') ...[
+            Text(
+              'Address Details',
+              style: GoogleFonts.dmSans(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: _K.navy,
+              ),
             ),
-          ),
-          const SizedBox(height: 8),
+            const SizedBox(height: 8),
 
           // Service Area Notice
           Container(
@@ -1497,6 +1458,7 @@ class _OrderScreenState extends State<OrderScreen> {
           TextFormField(
             initialValue: _K.taclobanCity,
             readOnly: true,
+            maxLines: 1,
             style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
             decoration: InputDecoration(
               labelText: 'City (Fixed Service Area)',
@@ -1658,60 +1620,14 @@ class _OrderScreenState extends State<OrderScreen> {
                 ),
               ],
             ),
-          if (_selectedBarangayId != null) ...[
-            const SizedBox(height: 10),
-            Container(
-              width: double.infinity,
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: _K.primaryPale,
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: _K.primary, width: 1),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Fee Preview ($_feeZoneLabel)',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w700,
-                      color: _K.primary,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  Text(
-                    _deliveryType == 'pickup'
-                        ? 'Pickup Fee: ₱ ${_basePickupFee.toStringAsFixed(2)}'
-                        : 'Pickup Fee: ₱ 0.00 (Drop-off selected)',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _K.slate,
-                    ),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    'Delivery Fee: ₱ ${_baseDeliveryFee.toStringAsFixed(2)}',
-                    style: GoogleFonts.dmSans(
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                      color: _K.slate,
-                    ),
-                  ),
-
-                  const SizedBox(height: 8),
-                  _buildLogisticsExplanationCard(compact: true),
-                ],
-              ),
-            ),
-          ],
-          const SizedBox(height: 12),
-
           TextFormField(
             controller: _addressController,
             onChanged: (_) => setState(() {}),
-            maxLines: 2,
+            minLines: 1,
+            maxLines: null,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(_emojiRegex),
+            ],
             style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
             decoration: InputDecoration(
               labelText: 'House No. / Street / Landmark',
@@ -1778,7 +1694,12 @@ class _OrderScreenState extends State<OrderScreen> {
               ),
             ),
           ],
-          const SizedBox(height: 16),
+            const SizedBox(height: 16),
+            _laundryPhotoBox(),
+            const SizedBox(height: 16),
+            _pickupDeliveryFeeCard(),
+            const SizedBox(height: 16),
+          ],
 
           Container(
             width: double.infinity,
@@ -1809,7 +1730,11 @@ class _OrderScreenState extends State<OrderScreen> {
 
           TextFormField(
             controller: _instructionsController,
-            maxLines: 3,
+            minLines: 1,
+            maxLines: null,
+            inputFormatters: [
+              FilteringTextInputFormatter.deny(_emojiRegex),
+            ],
             style: GoogleFonts.dmSans(fontSize: 13, color: _K.navy),
             decoration: InputDecoration(
               hintText: 'Special handling requests (optional)',
@@ -1843,7 +1768,7 @@ class _OrderScreenState extends State<OrderScreen> {
             children: [
               _backButton(),
               const SizedBox(width: 12),
-              Expanded(child: _nextButton('Continue →', _goNext)),
+              Expanded(child: _nextButton('Continue ?', _goNext)),
             ],
           ),
         ],
@@ -1851,14 +1776,19 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _deliveryTypeTile(String type, IconData icon, String label) {
+  Widget _deliveryTypeTile(
+    String type,
+    IconData icon,
+    String label,
+    String subtitle,
+  ) {
     final isSelected = _deliveryType == type;
     return Expanded(
       child: GestureDetector(
         onTap: () => setState(() => _deliveryType = type),
         child: AnimatedContainer(
           duration: const Duration(milliseconds: 150),
-          padding: const EdgeInsets.symmetric(vertical: 16),
+          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
             color: isSelected ? _K.primaryPale : Colors.white,
             borderRadius: BorderRadius.circular(16),
@@ -1867,20 +1797,157 @@ class _OrderScreenState extends State<OrderScreen> {
               width: 1.5,
             ),
           ),
-          child: Column(
+          child: Stack(
             children: [
-              Icon(icon, size: 26, color: isSelected ? _K.primary : _K.slate),
-              const SizedBox(height: 6),
-              Text(
-                label,
-                style: GoogleFonts.dmSans(
-                  fontSize: 12,
-                  fontWeight: FontWeight.w700,
-                  color: isSelected ? _K.primary : _K.slate,
+              if (isSelected)
+                const Positioned(
+                  right: 0,
+                  top: 0,
+                  child: Icon(
+                    Icons.check_circle_rounded,
+                    size: 20,
+                    color: _K.primary,
+                  ),
                 ),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Icon(
+                    icon,
+                    size: 30,
+                    color: isSelected ? _K.primary : _K.slate,
+                  ),
+                  const SizedBox(height: 10),
+                  Text(
+                    label,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w800,
+                      color: isSelected ? _K.primary : _K.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    subtitle,
+                    style: GoogleFonts.dmSans(fontSize: 11, color: _K.muted),
+                  ),
+                ],
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _dropOffNoFeeBanner() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: LaundryHubColors.successPale,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: LaundryHubColors.success, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.check_circle_rounded, color: LaundryHubColors.success),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Text(
+              'No delivery fee � you bring it to us!',
+              style: GoogleFonts.dmSans(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: LaundryHubColors.successDark,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _pickupDeliveryFeeCard() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: _K.amberLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: _K.amber, width: 1.2),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.two_wheeler_rounded, color: _K.amber),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Delivery fee: ?50',
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w800,
+                    color: _K.navy,
+                  ),
+                ),
+                Text(
+                  'paid to rider upon pickup',
+                  style: GoogleFonts.dmSans(fontSize: 11, color: _K.slate),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _laundryPhotoBox() {
+    return GestureDetector(
+      onTap: _pickLaundryPhoto,
+      child: Container(
+        width: double.infinity,
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: _K.border, width: 1.5),
+        ),
+        child: Row(
+          children: [
+            Icon(
+              _laundryPhoto == null
+                  ? Icons.add_a_photo_outlined
+                  : Icons.check_circle_rounded,
+              color: _laundryPhoto == null ? _K.primary : LaundryHubColors.success,
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    _laundryPhoto == null
+                        ? 'Upload laundry photo'
+                        : 'Laundry photo added',
+                    style: GoogleFonts.dmSans(
+                      fontSize: 13,
+                      fontWeight: FontWeight.w800,
+                      color: _K.navy,
+                    ),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    'include all bags so the rider knows what to expect',
+                    style: GoogleFonts.dmSans(fontSize: 11, color: _K.muted),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
       ),
     );
@@ -1943,7 +2010,7 @@ class _OrderScreenState extends State<OrderScreen> {
             ),
             const SizedBox(width: 8),
             Text(
-              '₱ ${fee.toStringAsFixed(2)}',
+              '? ${fee.toStringAsFixed(2)}',
               style: GoogleFonts.outfit(
                 fontSize: 13,
                 fontWeight: FontWeight.w700,
@@ -2056,7 +2123,7 @@ class _OrderScreenState extends State<OrderScreen> {
     ),
   );
 
-  // â”€â”€ Step 3: Summary â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Step 3: Summary ───────────────────────────────────────────────────────
 
   Widget _buildStep3() {
     if (_services.isEmpty || _selectedServiceId == null) {
@@ -2066,23 +2133,20 @@ class _OrderScreenState extends State<OrderScreen> {
       (s) => s['id'] == _selectedServiceId,
       orElse: () => _services.first,
     );
-    final pricePerKg = (selectedSvc['pricePerKg'] as num?)?.toDouble() ?? 0.0;
-    final baseEstimate = (pricePerKg / 8) * _estimatedKg;
     final selectedAddOns = _selectedAddOns;
     final addOnTotal = _addOnTotal;
-    final pickupFee = _deliveryType == 'pickup' ? _basePickupFee : 0.0;
-    final deliveryFee = _baseDeliveryFee;
-    final estimatedTotal = baseEstimate + addOnTotal + pickupFee + deliveryFee;
+    final deliveryFee = _deliveryType == 'pickup'
+        ? _K.fixedPickupDeliveryFee
+        : 0.0;
+    final estimatedTotal = addOnTotal + deliveryFee;
     final streetAddress = _addressController.text.trim();
-    final displayStreetAddress = streetAddress.isEmpty
+    final addressParts = <String>[
+      if (streetAddress.isNotEmpty) streetAddress,
+      if (_selectedBarangayName.isNotEmpty) _selectedBarangayName,
+    ];
+    final displayPickupAddress = addressParts.isEmpty
         ? 'Not set'
-        : streetAddress;
-    final displayBarangay = _selectedBarangayName.isEmpty
-        ? 'Not selected'
-        : _selectedBarangayName;
-    final displayPickupAddress = _fullPickupAddress.isEmpty
-        ? 'Not set'
-        : _fullPickupAddress;
+        : addressParts.join(', ');
     final selectedServiceName = (selectedSvc['name'] as String? ?? '')
         .trim()
         .toUpperCase();
@@ -2149,62 +2213,34 @@ class _OrderScreenState extends State<OrderScreen> {
                   _deliveryType == 'pickup' ? 'PICKUP TIME' : 'DROP-OFF TIME',
                   _pickupTime != null ? _formatTime(_pickupTime!) : 'Not set',
                 ),
-                _summaryDivider(),
-                _summaryRow(
-                  'DELIVERY DATE',
-                  _deliveryDate != null
-                      ? _formatDate(_deliveryDate!)
-                      : 'Not set',
-                ),
-                _summaryDivider(),
-                _summaryRow(
-                  'DELIVERY TIME',
-                  _deliveryTime != null
-                      ? _formatTime(_deliveryTime!)
-                      : 'Not set',
-                ),
-                _summaryDivider(),
-                _summaryRow('CITY', _K.taclobanCity),
-                _summaryDivider(),
-                _summaryRow('BARANGAY', displayBarangay),
-                _summaryDivider(),
-                _summaryRow('STREET / LANDMARK', displayStreetAddress),
-                _summaryDivider(),
-                _summaryRow('PICKUP ADDRESS', displayPickupAddress),
-                _summaryDivider(),
-
-                _summaryRow('WEIGHT', '${_estimatedKg.toStringAsFixed(1)} kg'),
-                _summaryDivider(),
-                _summaryRow(
-                  'BASE ESTIMATE',
-                  '₱ ${baseEstimate.toStringAsFixed(2)}',
-                ),
-                if (selectedAddOns.isNotEmpty) ...[
+                if (_deliveryType == 'pickup') ...[
+                  _summaryDivider(),
+                  _summaryRow('ADDRESS', displayPickupAddress),
+                  _summaryDivider(),
+                  _summaryLaundryPhotoRow(),
+                ],
+                                if (selectedAddOns.isNotEmpty) ...[
                   _summaryDivider(),
                   ...selectedAddOns.map((addOn) {
                     final fee = (addOn['fee'] as num?)?.toDouble() ?? 0.0;
                     return _summaryRow(
                       addOnLabel,
-                      '${addOn['name']} (+₱ ${fee.toStringAsFixed(2)})',
+                      '${addOn['name']} (+? ${fee.toStringAsFixed(2)})',
                     );
                   }),
                   _summaryDivider(),
                   _summaryRow(
                     addOnTotalLabel,
-                    '₱ ${addOnTotal.toStringAsFixed(2)}',
+                    '? ${addOnTotal.toStringAsFixed(2)}',
                   ),
                 ],
                 _summaryDivider(),
                 _summaryRow(
-                  'PICKUP FEE',
-                  _deliveryType == 'pickup'
-                      ? '₱ ${pickupFee.toStringAsFixed(2)}'
-                      : '₱ 0.00 (Drop-off selected)',
-                ),
-                _summaryDivider(),
-                _summaryRow(
                   'DELIVERY FEE',
-                  '₱ ${deliveryFee.toStringAsFixed(2)}',
+                  _deliveryType == 'pickup'
+                      ? '? ${deliveryFee.toStringAsFixed(2)}'
+                      : '? 0.00',
+                  badgeText: _deliveryType == 'dropoff' ? 'No delivery fee' : null,
                 ),
                 if (_specialHandlingNotes.isNotEmpty) ...[
                   _summaryDivider(),
@@ -2226,7 +2262,7 @@ class _OrderScreenState extends State<OrderScreen> {
                       ),
                     ),
                     Text(
-                      '₱ ${estimatedTotal.toStringAsFixed(2)}',
+                      '? ${estimatedTotal.toStringAsFixed(2)}',
                       style: GoogleFonts.outfit(
                         fontSize: 20,
                         fontWeight: FontWeight.w800,
@@ -2238,9 +2274,6 @@ class _OrderScreenState extends State<OrderScreen> {
               ],
             ),
           ),
-          const SizedBox(height: 16),
-
-          _buildLogisticsExplanationCard(),
           const SizedBox(height: 16),
 
           // Payment note
@@ -2279,7 +2312,7 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 
-  Widget _summaryRow(String label, String value) => Padding(
+  Widget _summaryRow(String label, String value, {String? badgeText}) => Padding(
     padding: const EdgeInsets.symmetric(vertical: 2),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -2297,25 +2330,98 @@ class _OrderScreenState extends State<OrderScreen> {
         ),
         const SizedBox(width: 12),
         Expanded(
-          child: Text(
-            value,
-            textAlign: TextAlign.right,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            style: GoogleFonts.dmSans(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: _K.navy,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  textAlign: TextAlign.right,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.dmSans(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: _K.navy,
+                  ),
+                ),
+              ),
+              if (badgeText != null) ...[
+                const SizedBox(width: 8),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: LaundryHubColors.successSoft,
+                    borderRadius: BorderRadius.circular(999),
+                    border: Border.all(
+                      color: LaundryHubColors.success.withValues(alpha: 0.35),
+                    ),
+                  ),
+                  child: Text(
+                    badgeText,
+                    style: GoogleFonts.dmSans(
+                      fontSize: 10,
+                      fontWeight: FontWeight.w700,
+                      color: LaundryHubColors.success,
+                    ),
+                  ),
+                ),
+              ],
+            ],
           ),
         ),
       ],
     ),
   );
 
+  Widget _summaryLaundryPhotoRow() => Padding(
+    padding: const EdgeInsets.symmetric(vertical: 2),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Text(
+            'LAUNDRY PHOTO',
+            style: GoogleFonts.dmSans(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: _K.muted,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        if (_laundryPhotoPreviewBytes == null)
+          Text(
+            'Not added',
+            textAlign: TextAlign.right,
+            style: GoogleFonts.dmSans(
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+              color: _K.navy,
+            ),
+          )
+        else
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.memory(
+              _laundryPhotoPreviewBytes!,
+              width: 72,
+              height: 72,
+              fit: BoxFit.cover,
+            ),
+          ),
+      ],
+    ),
+  );
+
   Widget _summaryDivider() => const Divider(height: 20, color: _K.border);
 
-  // â”€â”€ Shared buttons â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+  // ── Shared buttons ────────────────────────────────────────────────────────
 
   Widget _nextButton(String label, VoidCallback onTap) {
     return GestureDetector(
@@ -2375,25 +2481,13 @@ class _OrderScreenState extends State<OrderScreen> {
       child: Container(
         height: 52,
         decoration: BoxDecoration(
-          gradient: _isLoading
-              ? const LinearGradient(
-                  colors: [
-                    LaundryHubColors.primaryLight,
-                    LaundryHubColors.primaryLight,
-                  ],
-                )
-              : const LinearGradient(
-                  colors: [
-                    LaundryHubColors.primary,
-                    LaundryHubColors.primaryLight,
-                  ],
-                ),
+          color: _isLoading ? LaundryHubColors.primaryLight : _K.actionSolid,
           borderRadius: BorderRadius.circular(14),
           boxShadow: _isLoading
               ? []
               : [
                   BoxShadow(
-                    color: LaundryHubColors.primary.withValues(alpha: 0.35),
+                    color: _K.actionSolid.withValues(alpha: 0.35),
                     blurRadius: 16,
                     offset: const Offset(0, 6),
                   ),
@@ -2422,3 +2516,16 @@ class _OrderScreenState extends State<OrderScreen> {
     );
   }
 }
+
+
+
+
+
+
+
+
+
+
+
+
+

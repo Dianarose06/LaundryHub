@@ -64,12 +64,11 @@ class _SplashGateState extends State<_SplashGate> {
   }
 
   Future<void> _initApp() async {
-    // Run auth check and a 1.0 second minimum brand display concurrently.
-    // This ensures the logo is visible for approximately 1.0 seconds only,
-    // avoiding glitchy instantaneous blinks while still being extremely fast.
+    // Run auth check and a 2.5 second minimum brand display concurrently.
+    // This keeps launch feeling polished while still resolving auth in parallel.
     final results = await Future.wait([
       _resolveAuthDestination(),
-      Future.delayed(const Duration(milliseconds: 1000)),
+      Future.delayed(const Duration(milliseconds: 2500)),
     ]);
 
     if (!mounted) return;
@@ -113,18 +112,32 @@ class _SplashGateState extends State<_SplashGate> {
       backgroundColor: LaundryHubColors.primary,
       body: Center(
         child: SizedBox(
-          width: 250,
-          height: 250,
-          child: Image.asset(
-            'assets/images/logo.png',
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return const Icon(
-                Icons.broken_image,
-                size: 100,
-                color: Colors.white,
-              );
-            },
+          width: 220,
+          height: 220,
+          child: Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              shape: BoxShape.circle,
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.14),
+                  blurRadius: 18,
+                  offset: const Offset(0, 8),
+                ),
+              ],
+            ),
+            child: Image.asset(
+              'assets/images/logo.png',
+              fit: BoxFit.contain,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.broken_image,
+                  size: 100,
+                  color: LaundryHubColors.primary,
+                );
+              },
+            ),
           ),
         ),
       ),

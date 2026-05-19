@@ -33,11 +33,17 @@ class AuthService {
   }
 
   static String _networkErrorMessage(Object? error) {
+    final candidates = ApiConfig.candidateBaseUrls.join(', ');
+
     if (error is TimeoutException) {
-      return 'Connection timed out. Please check that the Laravel server is running on port 8000.';
+      return 'Connection timed out. The app could not reach Laravel on port 8000. '
+          'Tried: $candidates. '
+          'If you are using a real phone, run Flutter with '
+          '--dart-define=API_BASE_URL=http://<YOUR_PC_LAN_IP>:8000 and make sure Laravel is reachable on that IP.';
     }
 
-    return 'Unable to reach the Laravel server. Please check that Docker is running and your phone is on the same Wi-Fi.';
+    return 'Unable to reach the Laravel server. '
+        'Check that Docker/Laravel is running, port 8000 is exposed, and phone and PC are on the same Wi-Fi.';
   }
 
   static String _friendlyError(Object error) {
@@ -58,7 +64,15 @@ class AuthService {
         'password': password,
       });
 
-      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      Map<String, dynamic> data;
+      try {
+        final decoded = jsonDecode(response.body);
+        data = decoded is Map<String, dynamic>
+            ? decoded
+            : <String, dynamic>{'message': 'Unexpected server response.'};
+      } catch (_) {
+        data = <String, dynamic>{};
+      }
 
       if (response.statusCode == 200) {
         final role = data['role']?.toString().toLowerCase() ?? 'user';
@@ -97,6 +111,15 @@ class AuthService {
         return {
           'success': false,
           'message': data['message'] ?? 'Invalid credentials.',
+        };
+      }
+
+      if (response.statusCode == 429) {
+        return {
+          'success': false,
+          'message':
+              data['message'] ??
+              'Too many login attempts. Please wait a minute and try again.',
         };
       }
 

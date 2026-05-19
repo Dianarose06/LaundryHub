@@ -19,8 +19,6 @@ class _C {
   static const green = LaundryHubColors.success;
   static const greenDark = LaundryHubColors.successDark;
   static const greenLight = LaundryHubColors.successSoft;
-  static const amber = LaundryHubColors.warning;
-  static const amberLight = LaundryHubColors.warningSoft;
   static const pendingText = Color(0xFF0E7490);
   static const pendingBg = Color(0xFFCFFAFE);
   static const red = LaundryHubColors.errorStrong;

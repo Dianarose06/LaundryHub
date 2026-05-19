@@ -256,6 +256,7 @@
                       <th>Order</th>
                       <th>Customer</th>
                       <th>Service</th>
+                      <th>Type</th>
                       <th>Total</th>
                       <th>Status</th>
                     </tr>
@@ -287,11 +288,11 @@
             <div class="bookings-actions">
               <div class="search-shell">
                 <svg class="text-muted" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                <input type="text" placeholder="Search orders..." class="search-input" />
+                <input id="bookings-search-input" type="text" placeholder="Search order ID or customer..." class="search-input" />
               </div>
-              <button class="button-outline button-icon" type="button">
+              <button id="bookings-search-button" class="button-outline button-icon" type="button">
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
-                Filter
+                Search
               </button>
               <button class="button-primary" type="button">
                 Add order
@@ -340,7 +341,6 @@
                   <col style="width: 130px;" />
                   <col />
                   <col style="width: 60px;" />
-                  <col style="width: 75px;" />
                   <col style="width: 105px;" />
                   <col style="width: 90px;" />
                   <col style="width: 150px;" />
@@ -350,7 +350,7 @@
                     <th>Order</th>
                     <th>Customer</th>
                     <th>Service</th>
-                    <th>Weight</th>
+                    <th>Type</th>
                     <th>Total</th>
                     <th>Status</th>
                     <th>Created</th>
@@ -488,7 +488,19 @@
                   <p class="analytics-eyebrow">Revenue trend</p>
                   <h3 class="heading-font text-lg font-semibold">Weekly revenue</h3>
                 </div>
-                <span class="analytics-chip">Mon-Sun</span>
+                <div class="analytics-chart-controls">
+                  <div class="analytics-week-nav">
+                    <button id="analytics-prev-week" class="analytics-nav-btn" type="button" aria-label="Previous week">&lt;</button>
+                    <span id="analytics-range-label" class="analytics-chip">Mon-Sun</span>
+                    <button id="analytics-next-week" class="analytics-nav-btn" type="button" aria-label="Next week">&gt;</button>
+                  </div>
+                  <div class="analytics-date-range">
+                    <input id="analytics-start-date" class="report-select" type="date" />
+                    <input id="analytics-end-date" class="report-select" type="date" />
+                    <button id="analytics-apply-range" class="button-outline" type="button">Apply</button>
+                    <button id="analytics-reset-range" class="button-outline" type="button">This week</button>
+                  </div>
+                </div>
               </div>
               <div class="h-48 flex items-end justify-between gap-4" id="weekly-bars"></div>
             </div>
@@ -567,12 +579,18 @@
               <h1 class="heading-font text-3xl font-semibold">Services</h1>
               <p class="text-sm text-muted">Create, update, and manage laundry service offerings.</p>
             </div>
+            <div class="panel p-4">
+              <div class="flex-row" style="width:100%;">
+                <input id="services-search-input" class="input-shell" placeholder="Search service name" />
+                <button id="services-search-button" class="button-primary" type="button">Search</button>
+              </div>
+            </div>
           </header>
 
           <div class="grid gap-6 lg:grid-cols-[1.2fr_0.8fr]">
             <div class="panel p-6 space-y-4">
-              <div class="table-shell">
-                <table>
+              <div class="table-shell services-table-shell">
+                <table id="services-table">
                   <thead>
                     <tr>
                       <th>Service</th>
@@ -593,9 +611,17 @@
                   <div class="space-y-3">
                     <input id="service-name" class="input-shell" placeholder="Service name" />
                     <textarea id="service-description" class="input-shell" rows="3" placeholder="Description"></textarea>
-                    <input id="service-price" class="input-shell" type="number" min="0" step="0.01" placeholder="Price per kg" />
-                    <input id="service-category" class="input-shell" placeholder="Category" />
-                    <input id="service-image" class="input-shell" placeholder="Image URL" />
+                    <div class="service-form-row">
+                      <input id="service-price" class="input-shell" type="number" min="0" step="0.01" placeholder="Price per kg" />
+                      <select id="service-category" class="input-shell">
+                        <option value="">Select category</option>
+                        <option value="Standard">Standard</option>
+                        <option value="Express">Express</option>
+                        <option value="Premium">Premium</option>
+                        <option value="Basic">Basic</option>
+                        <option value="Specialty">Specialty</option>
+                      </select>
+                    </div>
                     <label class="flex items-center gap-2 text-sm text-muted">
                       <input id="service-active" type="checkbox" checked />
                       Active
@@ -622,7 +648,7 @@
   </div>
 
   <div id="sidebar-overlay" class="overlay"></div>
-  <div id="drawer-overlay" class="overlay"></div>
+  <div id="customer-modal-overlay" class="overlay"></div>
 
   <div id="booking-modal-overlay" class="overlay"></div>
   <div id="booking-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title">
@@ -661,26 +687,37 @@
     </div>
   </div>
 
-  <div id="customer-drawer" class="drawer">
-    <div class="p-6 space-y-4 h-full overflow-y-auto">
+  <div id="customer-drawer" class="modal hidden customer-modal" role="dialog" aria-modal="true" aria-labelledby="customer-drawer-title">
+    <div class="modal-panel customer-modal-panel">
+      <div class="modal-body p-6 space-y-4" style="max-height:min(82vh,760px);">
       <div class="flex items-center justify-between">
         <h3 id="customer-drawer-title" class="heading-font text-lg font-semibold">Customer</h3>
         <button id="customer-drawer-close" class="button-outline" type="button">Close</button>
       </div>
 
+      <div id="customer-modal-loading" class="customer-modal-loading hidden" aria-live="polite" aria-busy="true">
+        <span class="customer-spinner" aria-hidden="true"></span>
+        <span class="text-xs text-muted">Loading customer details...</span>
+      </div>
+
+      <div id="customer-modal-content" class="space-y-4 hidden">
       <div class="grid gap-3">
         <label class="text-xs text-muted">Name</label>
         <input id="customer-name" class="input-shell" />
+        <div id="customer-name-error" class="field-error hidden"></div>
         <label class="text-xs text-muted">Email</label>
-        <input id="customer-email" class="input-shell" readonly />
+        <input id="customer-email" class="input-shell" />
+        <div id="customer-email-error" class="field-error hidden"></div>
         <label class="text-xs text-muted">Phone</label>
-        <input id="customer-phone" class="input-shell" />
+        <input id="customer-phone" class="input-shell" inputmode="numeric" maxlength="11" />
+        <div id="customer-phone-error" class="field-error hidden"></div>
         <label class="text-xs text-muted">Address</label>
-        <input id="customer-address" class="input-shell" />
+        <textarea id="customer-address" class="input-shell" rows="3"></textarea>
         <label class="text-xs text-muted">City</label>
         <input id="customer-city" class="input-shell" />
         <label class="text-xs text-muted">ZIP</label>
-        <input id="customer-zip" class="input-shell" />
+        <input id="customer-zip" class="input-shell" inputmode="numeric" maxlength="4" />
+        <div id="customer-zip-error" class="field-error hidden"></div>
         <label class="text-xs text-muted">Country</label>
         <input id="customer-country" class="input-shell" />
         <label class="flex items-center gap-2 text-sm text-muted">
@@ -752,7 +789,7 @@
               <tr>
                 <th>Order</th>
                 <th>Service</th>
-                <th>Weight</th>
+                <th>Order type</th>
                 <th>Total</th>
                 <th>Status</th>
               </tr>
@@ -767,6 +804,8 @@
       </div>
 
       <button id="customer-save" class="button-primary w-full" type="button">Save changes</button>
+      </div>
+      </div>
     </div>
   </div>
 

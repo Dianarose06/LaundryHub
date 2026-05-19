@@ -72,6 +72,10 @@ class LaundryHubTheme {
         surface: Colors.white,
       ),
       scaffoldBackgroundColor: LaundryHubColors.pageBackground,
+      splashFactory: NoSplash.splashFactory,
+      splashColor: Colors.transparent,
+      highlightColor: Colors.transparent,
+      hoverColor: Colors.transparent,
     );
 
     return base.copyWith(
@@ -88,6 +92,17 @@ class LaundryHubTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          overlayColor: Colors.transparent,
+        ),
+      ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          overlayColor: Colors.transparent,
+        ),
+      ),
+      iconButtonTheme: IconButtonThemeData(
+        style: IconButton.styleFrom(
+          overlayColor: Colors.transparent,
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

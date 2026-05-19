@@ -34,6 +34,8 @@ class Order extends Model
         'delivery_date',
         'delivery_time',
         'delivery_type',
+        'type',
+        'laundry_photo',
         'notes',
         'admin_notes',
     ];
@@ -121,4 +123,3 @@ class Order extends Model
         return '#LH-' . str_pad((string) $this->id, 3, '0', STR_PAD_LEFT);
     }
 }
-

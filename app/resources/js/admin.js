@@ -10,6 +10,7 @@ const state = {
     page: 1,
     perPage: 20,
     status: 'all',
+    search: '',
     steps: {},
     byId: {},
     activeOrderId: null,
@@ -21,11 +22,18 @@ const state = {
   },
   services: {
     editingId: null,
+    items: [],
+    search: '',
   },
   customerOrders: {
     page: 1,
     perPage: 10,
     lastPage: 1,
+  },
+  analytics: {
+    weekOffset: 0,
+    startDate: '',
+    endDate: '',
   },
   currentCustomerId: null,
 };
@@ -37,6 +45,7 @@ const viewTitles = {
   analytics: 'Analytics and Reports',
   services: 'Services',
 };
+const validViews = new Set(Object.keys(viewTitles));
 
 const qs = (selector, root = document) => root.querySelector(selector);
 const qsa = (selector, root = document) => Array.from(root.querySelectorAll(selector));
@@ -57,7 +66,59 @@ const safeApiBaseUrl = (() => {
 
 function setText(target, value) {
   const el = typeof target === 'string' ? qs(target) : target;
-  if (el) el.textContent = value;
+  if (!el) return;
+  el.classList.remove('skeleton');
+  el.textContent = value;
+}
+
+function setTableState(selector, colSpan, message) {
+  const body = qs(selector);
+  if (!body) return null;
+  body.innerHTML = `<tr><td colspan="${colSpan}">${message}</td></tr>`;
+  return body;
+}
+
+function setContainerState(selector, message) {
+  const container = qs(selector);
+  if (!container) return null;
+  container.innerHTML = `<div style="font-size:13px;color:var(--color-text-secondary)">${message}</div>`;
+  return container;
+}
+
+function skeletonLine(width = '100%', size = 'md') {
+  return `<div class="skeleton skeleton-line ${size}" style="width:${width};"></div>`;
+}
+
+function setSkeletonValue(selector, width = '70%', size = 'lg') {
+  const el = qs(selector);
+  if (!el) return;
+  el.innerHTML = skeletonLine(width, size);
+}
+
+function setTableSkeleton(selector, colSpan, rows = 4) {
+  const body = qs(selector);
+  if (!body) return;
+  const rowHtml = Array.from({ length: rows }).map(() => `
+    <tr class="skeleton-row">
+      ${Array.from({ length: colSpan }).map(() => `<td>${skeletonLine('100%', 'sm')}</td>`).join('')}
+    </tr>
+  `).join('');
+  body.innerHTML = rowHtml;
+}
+
+function setTopCustomersSkeleton(selector, count = 4) {
+  const target = qs(selector);
+  if (!target) return;
+  target.innerHTML = Array.from({ length: count }).map(() => `
+    <div class="top-customer-row">
+      <span class="skeleton skeleton-avatar"></span>
+      <div class="top-customer-info">
+        <div>${skeletonLine('70%', 'sm')}</div>
+        <div style="margin-top:6px;">${skeletonLine('40%', 'sm')}</div>
+      </div>
+      <div style="width:80px;">${skeletonLine('100%', 'sm')}</div>
+    </div>
+  `).join('');
 }
 
 function show(el) {
@@ -92,6 +153,17 @@ function formatDate(value) {
   return date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' });
 }
 
+function formatShortDateRange(startDate, endDate) {
+  if (!startDate || !endDate) return 'Mon-Sun';
+
+  const start = new Date(`${startDate}T00:00:00`);
+  const end = new Date(`${endDate}T00:00:00`);
+  if (Number.isNaN(start.getTime()) || Number.isNaN(end.getTime())) return 'Mon-Sun';
+
+  const formatLabel = (date) => date.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+  return `${formatLabel(start)}-${formatLabel(end)}`;
+}
+
 function formatValue(value, fallback = '---') {
   if (value === null || value === undefined || value === '') return fallback;
   return value;
@@ -120,7 +192,21 @@ function normalizeStatus(value) {
 
 function formatDeliveryType(value) {
   const type = normalizeStatus(value) || 'pickup';
-  return type === 'delivery' ? 'Delivery' : 'Pickup';
+  if (type === 'delivery' || type === 'dropoff') return 'Drop-off';
+  return 'Pickup';
+}
+
+function formatCurrencyExact(value) {
+  const num = Number(value || 0);
+  return `PHP ${num.toLocaleString('en-PH', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
+}
+
+function isPickupOrder(order) {
+  const type = normalizeStatus(order?.type || order?.delivery_type);
+  return type !== 'delivery' && type !== 'dropoff';
 }
 
 function formatOrderDisplayId(order) {
@@ -136,8 +222,11 @@ function renderBookingDetailsContent(order) {
   const currentStep = getStepForOrder(orderId, statusValue);
   const pickupDate = formatDate(order.pickup_date);
   const deliveryDate = formatDate(order.delivery_date || order.pickup_date);
-  const deliveryType = formatDeliveryType(order.delivery_type);
+  const deliveryType = formatDeliveryType(order.type || order.delivery_type);
+  const isPickup = isPickupOrder(order);
   const pickupAddress = formatValue(order.pickup_address);
+  const deliveryFee = isPickup ? 'PHP 50.00' : 'PHP 0.00 (No delivery fee)';
+  const laundryPhotoUrl = order.laundry_photo_url || order.laundry_photo || '';
   const updatedAt = formatDate(order.updated_at);
   const stepChips = ['ongoing', 'ready', 'completed'].includes(statusValue)
     ? renderStepChips(orderId, currentStep)
@@ -155,13 +244,19 @@ function renderBookingDetailsContent(order) {
         <div class="details-value">${deliveryDate}</div>
       </div>
       <div>
-        <div class="details-label">Delivery type</div>
+        <div class="details-label">Order type</div>
         <div class="details-value">${deliveryType}</div>
       </div>
+      <div>
+        <div class="details-label">Delivery fee</div>
+        <div class="details-value">${deliveryFee}</div>
+      </div>
+      ${isPickup ? `
       <div>
         <div class="details-label">Pickup address</div>
         <div class="details-value">${pickupAddress}</div>
       </div>
+      ` : ''}
       <div>
         <div class="details-label">Created</div>
         <div class="details-value">${formatDate(order.created_at)}</div>
@@ -171,6 +266,14 @@ function renderBookingDetailsContent(order) {
         <div class="details-value">${updatedAt}</div>
       </div>
     </div>
+    ${(isPickup && laundryPhotoUrl) ? `
+      <div class="details-photo">
+        <div class="details-label">Laundry photo</div>
+        <a href="${escapeHtml(laundryPhotoUrl)}" target="_blank" rel="noopener">
+          <img src="${escapeHtml(laundryPhotoUrl)}" alt="Laundry photo for ${escapeHtml(formatOrderDisplayId(order))}">
+        </a>
+      </div>
+    ` : ''}
     <div class="details-actions">
       ${stepChips ? `<div class="step-chips">${stepChips}</div>` : '<div></div>'}
       <div class="action-buttons">${actions || '<span class="text-xs text-muted">No actions</span>'}</div>
@@ -191,18 +294,42 @@ function stepToStatus(step) {
   return 'ongoing';
 }
 
-function setActiveView(view) {
-  state.view = view;
+function viewToPath(view) {
+  return `/admin/${view}`;
+}
+
+function pathToView(pathname) {
+  const path = (pathname || '').replace(/\/+$/, '');
+  if (path === '/admin' || path === '') return 'dashboard';
+  const segment = path.replace(/^\/admin\/?/, '').split('/')[0];
+  return validViews.has(segment) ? segment : 'dashboard';
+}
+
+function setActiveView(view, options = {}) {
+  const normalizedView = validViews.has(view) ? view : 'dashboard';
+  state.view = normalizedView;
 
   qsa('.view-section').forEach((section) => {
-    section.classList.toggle('hidden', section.dataset.view !== view);
+    section.classList.toggle('hidden', section.dataset.view !== normalizedView);
   });
 
   qsa('[data-view]').forEach((link) => {
-    link.classList.toggle('active', link.dataset.view === view);
+    link.classList.toggle('active', link.dataset.view === normalizedView);
   });
 
-  loadView(view).catch((error) => {
+  if (options.syncUrl) {
+    const nextPath = viewToPath(normalizedView);
+    const currentPath = window.location.pathname.replace(/\/+$/, '');
+    if (currentPath !== nextPath) {
+      if (options.replaceUrl) {
+        window.history.replaceState({ view: normalizedView }, '', nextPath);
+      } else {
+        window.history.pushState({ view: normalizedView }, '', nextPath);
+      }
+    }
+  }
+
+  loadView(normalizedView).catch((error) => {
     console.error('Failed to load view', error);
   });
 }
@@ -226,7 +353,7 @@ function isLoginPagePath() {
 }
 
 function isDashboardPagePath() {
-  return window.location.pathname.startsWith('/admin/dashboard');
+  return window.location.pathname.startsWith('/admin/');
 }
 
 function showLogin() {
@@ -443,7 +570,8 @@ async function bootstrapApp() {
   state.token = token;
   state.user = user;
   showApp();
-  setActiveView('dashboard');
+  const initialView = pathToView(window.location.pathname);
+  setActiveView(initialView, { replaceUrl: true, syncUrl: true });
   // Token + role already verified from localStorage — no extra round-trip needed on boot.
   // Background-refresh user data without blocking UI render.
   apiRequest('/user').then((meRes) => {
@@ -570,10 +698,12 @@ async function loadView(view) {
 }
 
 async function loadDashboard() {
-  setText('#stat-total-bookings', '--');
-  setText('#stat-pending', '--');
-  setText('#stat-revenue', '--');
-  setText('#stat-customers', '--');
+  setSkeletonValue('#stat-total-bookings', '70%');
+  setSkeletonValue('#stat-pending', '55%');
+  setSkeletonValue('#stat-revenue', '85%');
+  setSkeletonValue('#stat-customers', '60%');
+  setTableSkeleton('#recent-orders-body', 6, 4);
+  setTopCustomersSkeleton('#top-customers-body', 4);
 
   // Prefer batch endpoint, but fall back to dedicated endpoints if unavailable/slow.
   const batchRes = await apiRequest('/admin/dashboard-batch', {
@@ -623,8 +753,8 @@ async function loadDashboard() {
 
   const badgeRevenue = qs('#stat-badge-revenue');
   if (badgeRevenue) {
-    badgeRevenue.className = revenue > 0 ? 'stat-badge green' : 'stat-badge red';
-    badgeRevenue.textContent = revenue > 0 ? 'Live sales' : 'No revenue yet';
+    badgeRevenue.className = revenue > 0 ? 'stat-badge green' : 'stat-badge muted';
+    badgeRevenue.textContent = revenue > 0 ? 'Live sales' : 'No orders yet today';
   }
 
   const badgeCustomers = qs('#stat-badge-customers');
@@ -646,17 +776,20 @@ function renderRecentOrders(orders) {
   body.innerHTML = '';
 
   if (!orders.length) {
-    body.innerHTML = '<tr><td colspan="5">No recent orders.</td></tr>';
+    body.innerHTML = '<tr><td colspan="6">No recent orders.</td></tr>';
     return;
   }
 
   orders.forEach((order) => {
     const tr = document.createElement('tr');
     const statusValue = (order.status || '').toString().toLowerCase();
+    const orderType = formatDeliveryType(order.type || order.delivery_type);
+    const typeWithIcon = orderType === 'Pickup' ? '🚚 Pickup' : 'Drop-off';
     tr.innerHTML = `
       <td><span class="order-id">${order.id || ''}</span></td>
       <td>${order.customer_name || 'Unknown'}</td>
       <td>${order.service_type || 'Service'}</td>
+      <td>${typeWithIcon}</td>
       <td>${formatCurrency(order.total_price || 0)}</td>
       <td><span class="status-pill" data-status="${statusValue}">${order.status || 'Pending'}</span></td>
     `;
@@ -669,12 +802,7 @@ function renderTopCustomers(customers) {
 }
 
 const AVATAR_COLORS = [
-  { bg: '#EDE9FE', color: '#5B21B6' }, // purple
-  { bg: '#CCFBF1', color: '#0F766E' }, // teal
-  { bg: '#DBEAFE', color: '#1D4ED8' }, // blue
-  { bg: '#FFE4E6', color: '#BE123C' }, // coral
-  { bg: '#FEF3C7', color: '#92400E' }, // amber
-  { bg: '#D1FAE5', color: '#065F46' }, // green
+  { bg: '#CFFAFE', color: '#0E7490' },
 ];
 
 const MEDAL_CLASSES = ['gold', 'silver', 'bronze', 'plain'];
@@ -690,11 +818,35 @@ function renderTopCustomersTo(customers, target) {
     return;
   }
 
-  customers.forEach((customer, index) => {
+  const deduped = [];
+  const byName = new Map();
+  customers.forEach((customer) => {
+    const key = (customer?.name || 'customer').toString().trim().toLowerCase();
+    const spendSource = customer?.spend_raw ?? customer?.total_spend ?? customer?.spend ?? '';
+    const numericSpend = typeof spendSource === 'number'
+      ? spendSource
+      : (Number(String(spendSource).replace(/[^0-9.-]/g, '')) || 0);
+    const numericOrders = Number(customer?.orders || 0) || 0;
+    if (!byName.has(key)) {
+      byName.set(key, {
+        name: customer?.name || 'Customer',
+        orders: numericOrders,
+        spend: numericSpend,
+      });
+      return;
+    }
+    const existing = byName.get(key);
+    existing.orders += numericOrders;
+    existing.spend += numericSpend;
+  });
+  byName.forEach((entry) => deduped.push(entry));
+  deduped.sort((a, b) => b.spend - a.spend);
+
+  deduped.forEach((customer, index) => {
     const initials = (customer.name || 'C').split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2);
     const avatarStyle = AVATAR_COLORS[index % AVATAR_COLORS.length];
     const medalClass  = MEDAL_CLASSES[Math.min(index, 3)];
-    const medalLabel  = MEDAL_LABELS[Math.min(index, 3)];
+    const medalLabel  = `${index + 1}`;
     const row = document.createElement('div');
     row.className = 'top-customer-row';
     row.innerHTML = `
@@ -704,7 +856,7 @@ function renderTopCustomersTo(customers, target) {
         <div class="top-customer-name">${customer.name || 'Customer'}</div>
         <div class="top-customer-meta">${customer.orders || 0} orders</div>
       </div>
-      <div class="top-customer-spend">${customer.spend || ''}</div>
+      <div class="top-customer-spend">${formatCurrency(customer.spend || 0)}</div>
     `;
     body.appendChild(row);
   });
@@ -833,6 +985,8 @@ function handleBookingStep(step) {
 }
 
 async function loadBookings() {
+  setTableSkeleton('#bookings-table-body', 8, 6);
+  setSkeletonValue('#bookings-footer-info', '45%', 'sm');
   const summaryPromise = loadBookingSummaries();
   const bookingsFilter = qs('#bookings-filter');
   if (bookingsFilter) bookingsFilter.value = state.bookings.status;
@@ -843,6 +997,9 @@ async function loadBookings() {
 
   if (state.bookings.status && state.bookings.status !== 'all') {
     params.set('status', state.bookings.status);
+  }
+  if (state.bookings.search) {
+    params.set('search', state.bookings.search);
   }
 
   const res = await apiRequest(`/admin/orders?${params.toString()}`);
@@ -878,6 +1035,8 @@ async function loadBookings() {
     const formattedDate = formatDate(order.created_at);
 
     const orderDisplayId = formatOrderDisplayId(order);
+    const orderType = formatDeliveryType(order.type || order.delivery_type);
+    const typeWithIcon = orderType === 'Pickup' ? '🚚 Pickup' : 'Drop-off';
     
     const colors = [
       { bg: '#EEEDFE', color: '#3C3489' },
@@ -895,7 +1054,7 @@ async function loadBookings() {
         </div>
       </td>
       <td>${order.service_type || 'Service'}</td>
-      <td>${order.weight_kg || 0} kg</td>
+      <td>${typeWithIcon}</td>
       <td>${formatCurrency(order.total_price || 0)}</td>
       <td>
         <span class="status-pill" data-status="${statusValue}">
@@ -968,6 +1127,8 @@ async function updateOrderStatus(orderId, status) {
 }
 
 async function loadCustomers() {
+  setTableSkeleton('#customers-table-body', 6, 6);
+  setSkeletonValue('#customers-page-info', '38%', 'sm');
   const params = new URLSearchParams({
     page: state.customers.page.toString(),
     per_page: state.customers.perPage.toString(),
@@ -1021,14 +1182,25 @@ async function loadCustomers() {
 
 async function openCustomerDrawer(customerId) {
   state.currentCustomerId = customerId;
-  qs('#customer-drawer')?.classList.add('open');
-  qs('#drawer-overlay')?.classList.add('show');
-  setText('#customer-drawer-title', 'Loading...');
+  qs('#customer-drawer')?.classList.remove('hidden');
+  qs('#customer-drawer')?.classList.add('show');
+  qs('#customer-modal-overlay')?.classList.add('show');
+  setText('#customer-drawer-title', 'Customer');
+  show(qs('#customer-modal-loading'));
+  hide(qs('#customer-modal-content'));
+  setFieldError('customer-name');
+  setFieldError('customer-email');
+  setFieldError('customer-phone');
+  setFieldError('customer-zip');
 
-  const profileRes = await apiRequest(`/admin/customers/${customerId}`);
+  const profileRes = await apiRequest(`/admin/customers/${customerId}`, {
+    timeoutMs: 20000,
+    suppressToast: true,
+  });
 
   if (!profileRes.ok) {
-    showToast('Unable to load customer.');
+    showToast(profileRes.data?.message || 'Unable to load customer details.');
+    hide(qs('#customer-modal-loading'));
     return;
   }
 
@@ -1057,20 +1229,79 @@ async function openCustomerDrawer(customerId) {
 
   state.customerOrders.page = 1;
   state.customerOrders.lastPage = 1;
-  await loadCustomerOrders(true);
+  hide(qs('#customer-modal-loading'));
+  show(qs('#customer-modal-content'));
+  // Load order history in the background so profile details appear immediately.
+  loadCustomerOrders(true);
 }
 
 function closeCustomerDrawer() {
-  qs('#customer-drawer')?.classList.remove('open');
-  qs('#drawer-overlay')?.classList.remove('show');
+  qs('#customer-drawer')?.classList.remove('show');
+  qs('#customer-drawer')?.classList.add('hidden');
+  qs('#customer-modal-overlay')?.classList.remove('show');
   state.currentCustomerId = null;
+}
+
+function setFieldError(fieldId, message = '') {
+  const errorEl = qs(`#${fieldId}-error`);
+  if (!errorEl) return;
+  if (!message) {
+    errorEl.textContent = '';
+    errorEl.classList.add('hidden');
+    return;
+  }
+  errorEl.textContent = message;
+  errorEl.classList.remove('hidden');
+}
+
+function enforceDigits(value, maxLen) {
+  return String(value || '').replace(/\D+/g, '').slice(0, maxLen);
+}
+
+function validateCustomerModalFields() {
+  const name = (qs('#customer-name')?.value || '').trim();
+  const email = (qs('#customer-email')?.value || '').trim();
+  const phone = (qs('#customer-phone')?.value || '').trim();
+  const zip = (qs('#customer-zip')?.value || '').trim();
+
+  let valid = true;
+  setFieldError('customer-name');
+  setFieldError('customer-email');
+  setFieldError('customer-phone');
+  setFieldError('customer-zip');
+
+  if (!/^[A-Za-z.\s]+$/.test(name)) {
+    setFieldError('customer-name', 'Name cannot contain numbers');
+    valid = false;
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    setFieldError('customer-email', 'Invalid email format');
+    valid = false;
+  }
+
+  if (phone && !/^\d{1,11}$/.test(phone)) {
+    setFieldError('customer-phone', 'Phone must contain only numbers (max 11 digits)');
+    valid = false;
+  }
+
+  if (zip && !/^\d{1,4}$/.test(zip)) {
+    setFieldError('customer-zip', 'ZIP must contain only numbers (max 4 digits)');
+    valid = false;
+  }
+
+  return valid;
 }
 
 async function saveCustomerProfile() {
   if (!state.currentCustomerId) return;
+  if (!validateCustomerModalFields()) return;
+  const saveButton = qs('#customer-save');
+  if (saveButton) saveButton.disabled = true;
 
   const payload = {
     name: qs('#customer-name').value.trim(),
+    email: qs('#customer-email').value.trim() || null,
     phone: qs('#customer-phone').value.trim() || null,
     address: qs('#customer-address').value.trim() || null,
     city: qs('#customer-city').value.trim() || null,
@@ -1085,12 +1316,15 @@ async function saveCustomerProfile() {
   });
 
   if (!res.ok) {
-    showToast('Unable to update customer.');
+    const message = res.data?.message || res.data?.error || 'Unable to update customer.';
+    showToast(message);
+    if (saveButton) saveButton.disabled = false;
     return;
   }
 
-  showToast('Customer updated.');
+  showToast('Changes saved successfully');
   await loadCustomers();
+  if (saveButton) saveButton.disabled = false;
 }
 
 async function loadCustomerOrders(reset = false) {
@@ -1098,6 +1332,9 @@ async function loadCustomerOrders(reset = false) {
 
   if (reset) {
     state.customerOrders.page = 1;
+    setTableSkeleton('#customer-orders-body', 5, 4);
+    setSkeletonValue('#customer-orders-page-info', '40%', 'sm');
+    setSkeletonValue('#customer-orders-title-count', '28%', 'sm');
   }
 
   const params = new URLSearchParams({
@@ -1129,10 +1366,11 @@ async function loadCustomerOrders(reset = false) {
 
   orders.forEach((order) => {
     const row = document.createElement('tr');
+    const orderType = formatDeliveryType(order.type || order.delivery_type);
     row.innerHTML = `
       <td>${order.id || ''}</td>
       <td>${order.service_type || ''}</td>
-      <td>${order.weight_kg || 0} kg</td>
+      <td>${orderType}</td>
       <td>${formatCurrency(order.total_price || 0)}</td>
       <td>${order.status || ''}</td>
     `;
@@ -1155,7 +1393,42 @@ async function loadCustomerOrders(reset = false) {
 }
 
 async function loadAnalytics() {
-  const res = await apiRequest('/admin/analytics', { timeoutMs: 20000 });
+  setSkeletonValue('#analytics-month', '38%', 'sm');
+  setSkeletonValue('#analytics-monthly-revenue', '70%');
+  setSkeletonValue('#analytics-monthly-card', '70%');
+  setSkeletonValue('#analytics-completion-rate', '35%');
+  setSkeletonValue('#analytics-monthly-orders', '38%');
+  setSkeletonValue('#analytics-new-customers', '45%');
+  setSkeletonValue('#analytics-total-customers', '55%', 'sm');
+  setSkeletonValue('#analytics-completed-orders', '40%');
+  setSkeletonValue('#analytics-cancelled-orders', '55%', 'sm');
+  setSkeletonValue('#analytics-top-service', '62%', 'sm');
+  setSkeletonValue('#analytics-top-service-meta', '44%', 'sm');
+  setSkeletonValue('#analytics-top-customer', '68%', 'sm');
+  setSkeletonValue('#analytics-top-customer-meta', '52%', 'sm');
+  setSkeletonValue('#analytics-order-health', '48%', 'sm');
+  const weeklyContainer = qs('#weekly-bars');
+  if (weeklyContainer) {
+    weeklyContainer.innerHTML = `<div style="width:100%;height:100%;" class="skeleton"></div>`;
+  }
+  const breakdownBody = qs('#service-breakdown-body');
+  if (breakdownBody) {
+    breakdownBody.innerHTML = `${skeletonLine('88%', 'sm')}<div style="margin-top:8px;">${skeletonLine('70%', 'sm')}</div><div style="margin-top:8px;">${skeletonLine('76%', 'sm')}</div>`;
+  }
+  const topCustomersList = qs('#analytics-top-customers-list');
+  if (topCustomersList) {
+    topCustomersList.innerHTML = `${skeletonLine('86%', 'sm')}<div style="margin-top:8px;">${skeletonLine('74%', 'sm')}</div><div style="margin-top:8px;">${skeletonLine('68%', 'sm')}</div>`;
+  }
+
+  const params = new URLSearchParams();
+  if (state.analytics.startDate && state.analytics.endDate) {
+    params.set('start_date', state.analytics.startDate);
+    params.set('end_date', state.analytics.endDate);
+  } else {
+    params.set('week_offset', String(state.analytics.weekOffset || 0));
+  }
+
+  const res = await apiRequest(`/admin/analytics?${params.toString()}`, { timeoutMs: 20000 });
   if (!res.ok) {
     showToast('Unable to load analytics.');
     return;
@@ -1190,34 +1463,68 @@ async function loadAnalytics() {
     bestCustomer ? `${bestCustomer.orders || 0} orders · ${bestCustomer.spend_label || formatCurrency(bestCustomer.spend || 0)}` : 'No customer orders yet'
   );
   setText('#analytics-order-health', `${completionRate}% completion`);
+  setText(
+    '#analytics-range-label',
+    formatShortDateRange(data.chart_start || '', data.chart_end || '') || 'Mon-Sun',
+  );
 
-  const weekly = data.weekly_revenue || [];
-  const max = Math.max(1, ...weekly.map((value) => Number(value || 0)));
-  const dayLabels = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+  if (data.chart_mode === 'custom') {
+    state.analytics.startDate = data.chart_start || state.analytics.startDate;
+    state.analytics.endDate = data.chart_end || state.analytics.endDate;
+  } else {
+    state.analytics.weekOffset = Number.isFinite(Number(data.week_offset)) ? Number(data.week_offset) : state.analytics.weekOffset;
+  }
 
-  const weeklyContainer = qs('#weekly-bars');
-  if (!weeklyContainer) return;
-  weeklyContainer.innerHTML = '';
+  const startInput = qs('#analytics-start-date');
+  const endInput = qs('#analytics-end-date');
+  if (startInput) startInput.value = state.analytics.startDate || '';
+  if (endInput) endInput.value = state.analytics.endDate || '';
 
-  weekly.forEach((value, index) => {
-    const height = Math.round((Number(value || 0) / max) * 100);
+  const weeklyRaw = Array.isArray(data.weekly_revenue) ? data.weekly_revenue : [];
+  const chartData = weeklyRaw.map((entry, index) => {
+    if (entry && typeof entry === 'object') {
+      const rawValue = entry.revenue ?? entry.value ?? entry.amount ?? 0;
+      const parsedValue = Number(rawValue || 0);
+      return {
+        label: entry.label || entry.day || `Day ${index + 1}`,
+        value: Number.isFinite(parsedValue) ? Math.max(0, parsedValue) : 0,
+      };
+    }
+
+    const parsedValue = Number(entry || 0);
+    return {
+      label: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'][index] || `Day ${index + 1}`,
+      value: Number.isFinite(parsedValue) ? Math.max(0, parsedValue) : 0,
+    };
+  });
+
+  const max = Math.max(...chartData.map((item) => item.value), 0);
+
+  const weeklyContainerReady = qs('#weekly-bars');
+  if (!weeklyContainerReady) return;
+  weeklyContainerReady.innerHTML = '';
+
+  chartData.forEach((entry) => {
+    const safeValue = Number(entry.value || 0);
+    const height = max > 0 ? Math.max(0, (safeValue / max) * 100) : 0;
+    const isZero = safeValue <= 0;
     const bar = document.createElement('div');
     bar.className = 'weekly-bar';
     bar.innerHTML = `
-      <div class="weekly-bar-value">${formatCurrency(Number(value || 0))}</div>
-      <div class="weekly-bar-track" title="${formatCurrency(Number(value || 0))}">
-        <div class="weekly-bar-fill" style="height:${height}%;"></div>
+      <div class="weekly-bar-value">${formatCurrencyExact(safeValue)}</div>
+      <div class="weekly-bar-track" title="${formatCurrencyExact(safeValue)}">
+        <div class="weekly-bar-fill ${isZero ? 'is-zero' : ''}" style="height:${height.toFixed(2)}%;"></div>
       </div>
-      <div class="weekly-bar-label">${dayLabels[index] || ''}</div>
+      <div class="weekly-bar-label">${entry.label || ''}</div>
     `;
-    weeklyContainer.appendChild(bar);
+    weeklyContainerReady.appendChild(bar);
   });
 
   const breakdown = data.service_breakdown || [];
-  const breakdownBody = qs('#service-breakdown-body');
+  const breakdownBodyReady = qs('#service-breakdown-body');
   const breakdownDonut = qs('#service-breakdown-donut');
   const breakdownTotal = qs('#service-breakdown-total');
-  if (breakdownBody) breakdownBody.innerHTML = '';
+  if (breakdownBodyReady) breakdownBodyReady.innerHTML = '';
 
   const palette = ['#3B82F6', '#34D399', '#F59E0B', '#EC4899', '#A78BFA', '#22D3EE'];
   let accumulator = 0;
@@ -1225,8 +1532,8 @@ async function loadAnalytics() {
   const segments = [];
 
   if (!breakdown.length) {
-    if (breakdownBody) {
-      breakdownBody.innerHTML = '<div class="analytics-empty">No service data yet.</div>';
+    if (breakdownBodyReady) {
+      breakdownBodyReady.innerHTML = '<div class="analytics-empty">No service data yet.</div>';
     }
     if (breakdownDonut) {
       breakdownDonut.style.background = 'conic-gradient(rgba(148, 163, 184, 0.2) 0% 100%)';
@@ -1242,7 +1549,7 @@ async function loadAnalytics() {
       accumulator += pct;
       pctTotal += pct;
 
-      if (breakdownBody) {
+      if (breakdownBodyReady) {
         const row = document.createElement('div');
         row.className = 'breakdown-legend-row';
         row.innerHTML = `
@@ -1252,7 +1559,7 @@ async function loadAnalytics() {
             <div class="breakdown-legend-meta">${pct}% &middot; ${item.count || 0} orders</div>
           </div>
         `;
-        breakdownBody.appendChild(row);
+        breakdownBodyReady.appendChild(row);
       }
     });
 
@@ -1266,11 +1573,11 @@ async function loadAnalytics() {
     }
   }
 
-  const topCustomersList = qs('#analytics-top-customers-list');
-  if (topCustomersList) {
-    topCustomersList.innerHTML = '';
+  const topCustomersListReady = qs('#analytics-top-customers-list');
+  if (topCustomersListReady) {
+    topCustomersListReady.innerHTML = '';
     if (!topCustomers.length) {
-      topCustomersList.innerHTML = '<div class="analytics-empty">No customer spend data yet.</div>';
+      topCustomersListReady.innerHTML = '<div class="analytics-empty">No customer spend data yet.</div>';
     } else {
       topCustomers.forEach((customer, index) => {
         const row = document.createElement('div');
@@ -1283,15 +1590,23 @@ async function loadAnalytics() {
           </div>
           <div class="analytics-customer-spend">${customer.spend_label || formatCurrency(customer.spend || 0)}</div>
         `;
-        topCustomersList.appendChild(row);
+        topCustomersListReady.appendChild(row);
       });
     }
   }
 }
 
 async function loadServices() {
+  setTableSkeleton('#services-table-body', 5, 5);
+  setTopCustomersSkeleton('#services-top-customers-body', 4);
+  const params = new URLSearchParams();
+  if (state.services.search) {
+    params.set('search', state.services.search);
+  }
+  const servicesPath = params.toString() ? `/admin/services?${params.toString()}` : '/admin/services';
+
   const [res, topRes] = await Promise.all([
-    apiRequest('/admin/services'),
+    apiRequest(servicesPath),
     apiRequest('/admin/top-customers'),
   ]);
   const body = qs('#services-table-body');
@@ -1299,15 +1614,18 @@ async function loadServices() {
   body.innerHTML = '';
 
   if (!res.ok) {
-    body.innerHTML = '<tr><td colspan="6">Unable to load services.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5">Unable to load services.</td></tr>';
     renderTopCustomersTo(topRes.ok ? topRes.data?.data || [] : [], '#services-top-customers-body');
     return;
   }
 
-  const services = res.data?.data || [];
+  const services = Array.isArray(res.data?.data)
+    ? res.data.data
+    : (Array.isArray(res.data) ? res.data : []);
+  state.services.items = services;
 
   if (!services.length) {
-    body.innerHTML = '<tr><td colspan="6">No services found.</td></tr>';
+    body.innerHTML = '<tr><td colspan="5">No services found.</td></tr>';
   }
 
   services.forEach((service) => {
@@ -1334,20 +1652,17 @@ async function loadServices() {
 async function saveService() {
   const payload = {
     name: qs('#service-name').value.trim(),
-    description: qs('#service-description').value.trim() || null,
+    description: qs('#service-description').value.trim() || '',
     price_per_kg: Number(qs('#service-price').value || 0),
-    category: qs('#service-category').value.trim() || null,
-    image_url: qs('#service-image').value.trim() || null,
+    category: qs('#service-category').value || '',
     is_active: qs('#service-active').checked,
   };
 
   const editingId = state.services.editingId;
-  const res = await apiRequest(`/admin/services${editingId ? `/${editingId}` : ''}`,
-    {
-      method: editingId ? 'PUT' : 'POST',
-      body: payload,
-    },
-  );
+  const res = await apiRequest(`/admin/services${editingId ? `/${editingId}` : ''}`, {
+    method: editingId ? 'PUT' : 'POST',
+    body: payload,
+  });
 
   if (!res.ok) {
     showToast('Unable to save service.');
@@ -1366,16 +1681,26 @@ function resetServiceForm() {
   qs('#service-description').value = '';
   qs('#service-price').value = '';
   qs('#service-category').value = '';
-  qs('#service-image').value = '';
   qs('#service-active').checked = true;
 }
 
 async function handleServiceEdit(serviceId) {
-  const res = await apiRequest('/admin/services');
-  if (!res.ok) return;
+  const normalizedId = Number(serviceId);
+  let service = state.services.items.find((item) => item.id === normalizedId);
 
-  const services = res.data?.data || [];
-  const service = services.find((item) => item.id === Number(serviceId));
+  if (!service) {
+    const res = await apiRequest('/admin/services');
+    if (!res.ok) {
+      showToast('Unable to load service details.');
+      return;
+    }
+    const services = Array.isArray(res.data?.data)
+      ? res.data.data
+      : (Array.isArray(res.data) ? res.data : []);
+    state.services.items = services;
+    service = services.find((item) => item.id === normalizedId);
+  }
+
   if (!service) return;
 
   state.services.editingId = service.id;
@@ -1384,12 +1709,11 @@ async function handleServiceEdit(serviceId) {
   qs('#service-description').value = service.description || '';
   qs('#service-price').value = service.price_per_kg || '';
   qs('#service-category').value = service.category || '';
-  qs('#service-image').value = service.image_url || '';
   qs('#service-active').checked = service.is_active !== false;
 }
 
 async function handleServiceDelete(serviceId) {
-  const confirmed = window.confirm('Delete this service?');
+  const confirmed = window.confirm('Are you sure you want to delete this service?');
   if (!confirmed) return;
 
   const res = await apiRequest(`/admin/services/${serviceId}`, { method: 'DELETE' });
@@ -1436,10 +1760,64 @@ function bindEvents() {
 
   qsa('[data-view]').forEach((link) => {
     link.addEventListener('click', () => {
-      setActiveView(link.dataset.view);
+      setActiveView(link.dataset.view, { syncUrl: true });
       closeSidebar();
     });
   });
+
+  const analyticsPrevWeek = qs('#analytics-prev-week');
+  if (analyticsPrevWeek) {
+    analyticsPrevWeek.addEventListener('click', () => {
+      state.analytics.startDate = '';
+      state.analytics.endDate = '';
+      state.analytics.weekOffset -= 1;
+      loadAnalytics();
+    });
+  }
+
+  const analyticsNextWeek = qs('#analytics-next-week');
+  if (analyticsNextWeek) {
+    analyticsNextWeek.addEventListener('click', () => {
+      state.analytics.startDate = '';
+      state.analytics.endDate = '';
+      state.analytics.weekOffset += 1;
+      loadAnalytics();
+    });
+  }
+
+  const analyticsApplyRange = qs('#analytics-apply-range');
+  if (analyticsApplyRange) {
+    analyticsApplyRange.addEventListener('click', () => {
+      const startDate = (qs('#analytics-start-date')?.value || '').trim();
+      const endDate = (qs('#analytics-end-date')?.value || '').trim();
+      if (!startDate || !endDate) {
+        showToast('Please select both start and end dates.');
+        return;
+      }
+      if (startDate > endDate) {
+        showToast('Start date must be before or equal to end date.');
+        return;
+      }
+      state.analytics.startDate = startDate;
+      state.analytics.endDate = endDate;
+      state.analytics.weekOffset = 0;
+      loadAnalytics();
+    });
+  }
+
+  const analyticsResetRange = qs('#analytics-reset-range');
+  if (analyticsResetRange) {
+    analyticsResetRange.addEventListener('click', () => {
+      state.analytics.startDate = '';
+      state.analytics.endDate = '';
+      state.analytics.weekOffset = 0;
+      const startInput = qs('#analytics-start-date');
+      const endInput = qs('#analytics-end-date');
+      if (startInput) startInput.value = '';
+      if (endInput) endInput.value = '';
+      loadAnalytics();
+    });
+  }
 
   const bookingsFilter = qs('#bookings-filter');
   if (bookingsFilter) {
@@ -1548,6 +1926,78 @@ function bindEvents() {
       loadCustomers();
     });
   }
+  const customersSearchInput = qs('#customers-search-input');
+  if (customersSearchInput) {
+    let customerSearchTimer = null;
+    customersSearchInput.addEventListener('input', () => {
+      if (customerSearchTimer) clearTimeout(customerSearchTimer);
+      customerSearchTimer = setTimeout(() => {
+        state.customers.search = customersSearchInput.value.trim();
+        state.customers.page = 1;
+        loadCustomers();
+      }, 300);
+    });
+    customersSearchInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      state.customers.search = customersSearchInput.value.trim();
+      state.customers.page = 1;
+      loadCustomers();
+    });
+  }
+
+  const bookingsSearchButton = qs('#bookings-search-button');
+  if (bookingsSearchButton) {
+    bookingsSearchButton.addEventListener('click', () => {
+      state.bookings.search = (qs('#bookings-search-input')?.value || '').trim();
+      state.bookings.page = 1;
+      loadBookings();
+    });
+  }
+  const bookingsSearchInput = qs('#bookings-search-input');
+  if (bookingsSearchInput) {
+    let bookingsSearchTimer = null;
+    bookingsSearchInput.addEventListener('input', () => {
+      if (bookingsSearchTimer) clearTimeout(bookingsSearchTimer);
+      bookingsSearchTimer = setTimeout(() => {
+        state.bookings.search = bookingsSearchInput.value.trim();
+        state.bookings.page = 1;
+        loadBookings();
+      }, 300);
+    });
+    bookingsSearchInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      state.bookings.search = bookingsSearchInput.value.trim();
+      state.bookings.page = 1;
+      loadBookings();
+    });
+  }
+
+  const servicesSearchButton = qs('#services-search-button');
+  if (servicesSearchButton) {
+    servicesSearchButton.addEventListener('click', () => {
+      state.services.search = (qs('#services-search-input')?.value || '').trim();
+      loadServices();
+    });
+  }
+  const servicesSearchInput = qs('#services-search-input');
+  if (servicesSearchInput) {
+    let servicesSearchTimer = null;
+    servicesSearchInput.addEventListener('input', () => {
+      if (servicesSearchTimer) clearTimeout(servicesSearchTimer);
+      servicesSearchTimer = setTimeout(() => {
+        state.services.search = servicesSearchInput.value.trim();
+        loadServices();
+      }, 300);
+    });
+    servicesSearchInput.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      state.services.search = servicesSearchInput.value.trim();
+      loadServices();
+    });
+  }
 
   const customersPrev = qs('#customers-prev');
   if (customersPrev) {
@@ -1577,11 +2027,42 @@ function bindEvents() {
   const customerDrawerClose = qs('#customer-drawer-close');
   if (customerDrawerClose) customerDrawerClose.addEventListener('click', closeCustomerDrawer);
 
-  const drawerOverlay = qs('#drawer-overlay');
-  if (drawerOverlay) drawerOverlay.addEventListener('click', closeCustomerDrawer);
+  const customerModalOverlay = qs('#customer-modal-overlay');
+  if (customerModalOverlay) customerModalOverlay.addEventListener('click', closeCustomerDrawer);
 
   const customerSave = qs('#customer-save');
   if (customerSave) customerSave.addEventListener('click', saveCustomerProfile);
+
+  const customerNameInput = qs('#customer-name');
+  if (customerNameInput) {
+    customerNameInput.addEventListener('input', () => {
+      setFieldError('customer-name');
+      customerNameInput.value = customerNameInput.value.replace(/[^A-Za-z.\s]/g, '');
+    });
+  }
+
+  const customerEmailInput = qs('#customer-email');
+  if (customerEmailInput) {
+    customerEmailInput.addEventListener('input', () => {
+      setFieldError('customer-email');
+    });
+  }
+
+  const customerPhoneInput = qs('#customer-phone');
+  if (customerPhoneInput) {
+    customerPhoneInput.addEventListener('input', () => {
+      setFieldError('customer-phone');
+      customerPhoneInput.value = enforceDigits(customerPhoneInput.value, 11);
+    });
+  }
+
+  const customerZipInput = qs('#customer-zip');
+  if (customerZipInput) {
+    customerZipInput.addEventListener('input', () => {
+      setFieldError('customer-zip');
+      customerZipInput.value = enforceDigits(customerZipInput.value, 4);
+    });
+  }
 
   const customerOrdersLoad = qs('#customer-orders-load');
   if (customerOrdersLoad) {
@@ -1615,7 +2096,11 @@ function bindEvents() {
   }
 
   const recentOrdersViewAll = qs('#recent-orders-view-all');
-  if (recentOrdersViewAll) recentOrdersViewAll.addEventListener('click', () => setActiveView('bookings'));
+  if (recentOrdersViewAll) {
+    recentOrdersViewAll.addEventListener('click', () =>
+      setActiveView('bookings', { syncUrl: true }),
+    );
+  }
 
   const sidebarToggle = qs('#sidebar-toggle');
   if (sidebarToggle) sidebarToggle.addEventListener('click', toggleSidebar);
@@ -1639,6 +2124,11 @@ function bindEvents() {
 
 window.addEventListener('DOMContentLoaded', () => {
   bindEvents();
+  window.addEventListener('popstate', () => {
+    if (!state.token) return;
+    const poppedView = pathToView(window.location.pathname);
+    setActiveView(poppedView, { replaceUrl: true, syncUrl: false });
+  });
   bootstrapApp();
 });
 

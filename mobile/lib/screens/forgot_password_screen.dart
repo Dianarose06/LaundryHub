@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/auth_service.dart';
 import '../theme/laundryhub_theme.dart';
 import 'dart:async';
@@ -28,6 +29,13 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
   int _resendTimer = 0;
   Timer? _timer;
   String _verificationCode = '';
+  static final RegExp _emailRegex = RegExp(
+    r'^[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}$',
+  );
+  static final RegExp _emojiRegex = RegExp(
+    r'[\u{1F300}-\u{1FAFF}\u{2600}-\u{27BF}]',
+    unicode: true,
+  );
 
   @override
   void dispose() {
@@ -205,6 +213,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   controller: _emailController,
                   enabled: !_codeSent,
                   keyboardType: TextInputType.emailAddress,
+                  maxLength: 100,
+                  maxLines: 1,
+                  style: const TextStyle(overflow: TextOverflow.ellipsis),
+                  inputFormatters: [
+                    FilteringTextInputFormatter.deny(_emojiRegex),
+                  ],
                   decoration: InputDecoration(
                     labelText: 'Email Address',
                     prefixIcon: const Icon(Icons.email_outlined),
@@ -213,13 +227,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                     ),
                     filled: true,
                     fillColor: Colors.white,
+                    counterText: '',
                   ),
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Email is required';
                     }
-                    if (!value.contains('@')) {
-                      return 'Enter a valid email';
+                    if (!_emailRegex.hasMatch(value.trim())) {
+                      return 'Please enter a valid email address';
                     }
                     return null;
                   },
@@ -278,8 +293,9 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           controller: _codeControllers[index],
                           focusNode: _codeFocusNodes[index],
                           textAlign: TextAlign.center,
-                          keyboardType: TextInputType.number,
+                          keyboardType: TextInputType.phone,
                           maxLength: 1,
+                          maxLines: 1,
                           decoration: InputDecoration(
                             counterText: '',
                             border: OutlineInputBorder(
@@ -291,6 +307,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                           style: const TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
+                            overflow: TextOverflow.ellipsis,
                           ),
                           onChanged: (value) {
                             if (value.isNotEmpty) {
@@ -331,8 +348,15 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: _obscurePassword,
+                    maxLength: 64,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'New Password',
+                      helperText: 'Min. 8 characters, 1 uppercase, 1 number',
                       prefixIcon: const Icon(Icons.lock_outline),
                       suffixIcon: IconButton(
                         icon: Icon(
@@ -349,13 +373,14 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      counterText: '',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {
                         return 'Password is required';
                       }
-                      if (value.length < 8) {
-                        return 'Password must be at least 8 characters';
+                      if (!RegExp(r'^(?=.*[A-Z])(?=.*\d).{8,}$').hasMatch(value)) {
+                        return 'Password must be at least 8 characters with 1 uppercase and 1 number';
                       }
                       return null;
                     },
@@ -366,6 +391,12 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                   TextFormField(
                     controller: _confirmPasswordController,
                     obscureText: _obscureConfirmPassword,
+                    maxLength: 64,
+                    maxLines: 1,
+                    style: const TextStyle(overflow: TextOverflow.ellipsis),
+                    inputFormatters: [
+                      FilteringTextInputFormatter.deny(_emojiRegex),
+                    ],
                     decoration: InputDecoration(
                       labelText: 'Confirm New Password',
                       prefixIcon: const Icon(Icons.lock_outline),
@@ -387,6 +418,7 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                       ),
                       filled: true,
                       fillColor: Colors.white,
+                      counterText: '',
                     ),
                     validator: (value) {
                       if (value == null || value.isEmpty) {

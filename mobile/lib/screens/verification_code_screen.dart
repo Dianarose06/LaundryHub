@@ -211,11 +211,13 @@ class _VerificationCodeScreenState extends State<VerificationCodeScreen> {
                             controller: _controllers[index],
                             focusNode: _focusNodes[index],
                             textAlign: TextAlign.center,
-                            keyboardType: TextInputType.number,
+                            keyboardType: TextInputType.phone,
                             maxLength: 1,
+                            maxLines: 1,
                             style: const TextStyle(
                               fontSize: 24,
                               fontWeight: FontWeight.bold,
+                              overflow: TextOverflow.ellipsis,
                             ),
                             decoration: InputDecoration(
                               counterText: '',

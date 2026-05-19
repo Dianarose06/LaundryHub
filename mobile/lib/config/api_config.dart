@@ -126,7 +126,7 @@ class ApiConfig {
             Uri.parse('$candidate/api/health'),
             headers: const {'Accept': 'application/json'},
           )
-          .timeout(const Duration(seconds: 3))
+          .timeout(const Duration(seconds: 5))
           .then((response) {
             if (!completer.isCompleted && response.statusCode < 500) {
               _resolvedReachableBaseUrl = candidate;
@@ -138,13 +138,11 @@ class ApiConfig {
           .whenComplete(() {
             pending -= 1;
             if (pending == 0 && !completer.isCompleted) {
-              final fallback =
-                  _runtimeOverrideBaseUrl ??
-                  (_envBaseUrl.isNotEmpty
-                      ? _normalizeBaseUrl(_envBaseUrl)
-                      : baseUrl);
-              _resolvedReachableBaseUrl = fallback;
-              completer.complete(fallback);
+              completer.completeError(
+                TimeoutException(
+                  'No reachable API host. Tried: ${candidates.join(', ')}',
+                ),
+              );
             }
           });
     }
